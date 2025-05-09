@@ -4,6 +4,17 @@ import { MainNavigation } from '@/components/MainNavigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { StatusBadge } from '@/components/StatusBadge';
 import { RequestStatus } from '@/types';
+import { useDatabase } from '@/hooks/use-database';
+import { 
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Button } from '@/components/ui/button';
+import { Link } from 'react-router-dom';
 
 // Mock data for headmaster request history
 const mockRequestHistory = [
@@ -60,17 +71,103 @@ const mockRequestHistory = [
 
 const HeadmasterHistory = () => {
   const [history] = useState(mockRequestHistory);
+  const [actionFilter, setActionFilter] = useState<string>('all');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [showUnresolvedOnly, setShowUnresolvedOnly] = useState(false);
+  const { isConnected } = useDatabase();
+  
+  // Filter and sort the history
+  let filteredHistory = [...history];
+  
+  // Apply action filter
+  if (actionFilter !== 'all') {
+    filteredHistory = filteredHistory.filter(request => {
+      if (actionFilter === 'approved') {
+        return request.status === 'forwarded_to_admin';
+      } else if (actionFilter === 'rejected') {
+        return request.status === 'rejected_by_headmaster';
+      }
+      return true;
+    });
+  }
+  
+  // Apply unresolved filter (if applicable)
+  if (showUnresolvedOnly) {
+    filteredHistory = filteredHistory.filter(request => 
+      request.status === 'forwarded_to_admin' && !request.adminStatus
+    );
+  }
+  
+  // Apply sorting
+  filteredHistory.sort((a, b) => {
+    const dateA = new Date(a.actionDate).getTime();
+    const dateB = new Date(b.actionDate).getTime();
+    return sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
+  });
 
   return (
     <div className="min-h-screen bg-background">
       <MainNavigation />
       
       <div className="container mx-auto py-8 px-4">
-        <h1 className="text-2xl font-bold mb-6">Request History</h1>
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-bold">Request History</h1>
+          {!isConnected && (
+            <p className="text-amber-600 text-sm">
+              ⚠️ Database connection issue. Some features may be limited.
+            </p>
+          )}
+        </div>
         
-        {history.length > 0 ? (
+        <div className="flex flex-wrap gap-4 items-center mb-6">
+          <div className="flex items-center gap-2">
+            <span className="text-sm">Filter by action:</span>
+            <Select
+              value={actionFilter}
+              onValueChange={setActionFilter}
+            >
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Filter by action" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectItem value="all">All Actions</SelectItem>
+                  <SelectItem value="approved">Approved & Forwarded</SelectItem>
+                  <SelectItem value="rejected">Rejected</SelectItem>
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <span className="text-sm">Sort by:</span>
+            <Select
+              value={sortOrder}
+              onValueChange={(value) => setSortOrder(value as 'asc' | 'desc')}
+            >
+              <SelectTrigger className="w-[150px]">
+                <SelectValue placeholder="Sort order" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="desc">Newest First</SelectItem>
+                <SelectItem value="asc">Oldest First</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div className="flex items-center gap-2 ml-auto">
+            <Button 
+              variant={showUnresolvedOnly ? "default" : "outline"}
+              onClick={() => setShowUnresolvedOnly(!showUnresolvedOnly)}
+            >
+              {showUnresolvedOnly ? "Showing Unresolved Only" : "Show All Requests"}
+            </Button>
+          </div>
+        </div>
+        
+        {filteredHistory.length > 0 ? (
           <div className="grid gap-6">
-            {history.map((request) => (
+            {filteredHistory.map((request) => (
               <Card key={request.id} className="shadow-sm">
                 <CardHeader className="pb-2">
                   <div className="flex justify-between items-center">
@@ -80,8 +177,8 @@ const HeadmasterHistory = () => {
                     <StatusBadge status={request.adminStatus || request.status} />
                   </div>
                   <div className="text-sm text-muted-foreground">
-                    Submitted: {new Date(request.submittedAt).toLocaleDateString()} | 
-                    Your action: {new Date(request.actionDate).toLocaleDateString()}
+                    Request Submitted: {new Date(request.submittedAt).toLocaleDateString()} | 
+                    Your Action: {new Date(request.actionDate).toLocaleDateString()}
                   </div>
                 </CardHeader>
                 <CardContent>
@@ -104,14 +201,28 @@ const HeadmasterHistory = () => {
                     {request.adminStatus && (
                       <div className="border-t pt-3 mt-2">
                         <p className="font-medium">Admin Decision</p>
-                        <p className="text-sm text-muted-foreground">
-                          {new Date(request.adminActionDate!).toLocaleDateString()}
-                        </p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <StatusBadge status={request.adminStatus} />
+                          <span className="text-sm text-muted-foreground">
+                            on {new Date(request.adminActionDate!).toLocaleDateString()}
+                          </span>
+                        </div>
                         {request.adminComment && (
-                          <p className="text-muted-foreground mt-1">{request.adminComment}</p>
+                          <p className="text-muted-foreground mt-2">{request.adminComment}</p>
                         )}
                       </div>
                     )}
+                    
+                    <div className="flex justify-end mt-2">
+                      <Button 
+                        variant="outline"
+                        asChild
+                      >
+                        <Link to={`/headmaster/requests/${request.id}`}>
+                          View Details
+                        </Link>
+                      </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>

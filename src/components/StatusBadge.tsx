@@ -11,11 +11,11 @@ interface StatusBadgeProps {
 const statusConfig: Record<RequestStatus, { label: string; className: string }> = {
   submitted: { 
     label: 'Submitted', 
-    className: 'bg-blue-100 text-blue-800' 
+    className: 'bg-neutral-100 text-neutral-800' 
   },
   pending_head_approval: { 
     label: 'Pending Head Approval', 
-    className: 'bg-yellow-100 text-yellow-800' 
+    className: 'bg-amber-100 text-amber-800' 
   },
   rejected_by_headmaster: { 
     label: 'Rejected by Headmaster', 
@@ -23,7 +23,7 @@ const statusConfig: Record<RequestStatus, { label: string; className: string }> 
   },
   forwarded_to_admin: { 
     label: 'Forwarded to Admin', 
-    className: 'bg-yellow-100 text-yellow-800' 
+    className: 'bg-amber-100 text-amber-800' 
   },
   rejected_by_admin: { 
     label: 'Rejected by Admin', 
@@ -35,11 +35,11 @@ const statusConfig: Record<RequestStatus, { label: string; className: string }> 
   },
   withdrawn_by_teacher: { 
     label: 'Withdrawn', 
-    className: 'bg-gray-100 text-gray-800' 
+    className: 'bg-neutral-100 text-neutral-800' 
   },
   expired: { 
     label: 'Expired', 
-    className: 'bg-gray-100 text-gray-800' 
+    className: 'bg-neutral-100 text-neutral-800' 
   },
 };
 

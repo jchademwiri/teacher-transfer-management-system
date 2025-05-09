@@ -6,10 +6,10 @@ import { StatusBadge } from '@/components/StatusBadge';
 import { DashboardCard } from '@/components/DashboardCard';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
-import { File, Users, Bell, School as SchoolIcon, ArrowRight } from 'lucide-react';
+import { useDatabase } from '@/hooks/use-database';
+import { File, Users, School as SchoolIcon, ArrowRight } from 'lucide-react';
 import { 
   MOCK_SCHOOLS, 
-  MOCK_SUBJECTS, 
   MOCK_TRANSFER_REQUESTS,
   MOCK_TEACHERS 
 } from '@/mock/data';
@@ -17,9 +17,13 @@ import { TransferRequest, School, Teacher } from '@/types';
 
 const HeadmasterDashboard = () => {
   const { user } = useAuth();
+  const { isConnected } = useDatabase();
   const [pendingRequests, setPendingRequests] = useState<TransferRequest[]>([]);
+  const [forwardedRequests, setForwardedRequests] = useState<TransferRequest[]>([]);
+  const [rejectedRequests, setRejectedRequests] = useState<TransferRequest[]>([]);
   const [school, setSchool] = useState<School | null>(null);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
+  const [recentActivity, setRecentActivity] = useState<TransferRequest[]>([]);
   
   useEffect(() => {
     // Get the headmaster's school
@@ -29,20 +33,53 @@ const HeadmasterDashboard = () => {
       
       if (headSchool) {
         // Get pending transfer requests for this school
-        const requests = MOCK_TRANSFER_REQUESTS.filter(
+        const pending = MOCK_TRANSFER_REQUESTS.filter(
           req => req.fromSchoolId === headSchool.id && 
                 req.status === 'pending_head_approval'
         );
-        setPendingRequests(requests);
+        setPendingRequests(pending);
+        
+        // Get forwarded requests
+        const forwarded = MOCK_TRANSFER_REQUESTS.filter(
+          req => req.fromSchoolId === headSchool.id && 
+                req.status === 'forwarded_to_admin'
+        );
+        setForwardedRequests(forwarded);
+        
+        // Get rejected requests
+        const rejected = MOCK_TRANSFER_REQUESTS.filter(
+          req => req.fromSchoolId === headSchool.id && 
+                req.status === 'rejected_by_headmaster'
+        );
+        setRejectedRequests(rejected);
         
         // Get teachers at this school
         const schoolTeachers = MOCK_TEACHERS.filter(
           t => t.schoolId === headSchool.id
         );
         setTeachers(schoolTeachers);
+        
+        // Get recent activity
+        const recent = [...MOCK_TRANSFER_REQUESTS]
+          .filter(req => req.fromSchoolId === headSchool.id)
+          .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+          .slice(0, 5);
+        setRecentActivity(recent);
       }
     }
   }, [user]);
+
+  // Helper function to get teacher name
+  const getTeacherName = (teacherId: string) => {
+    const teacher = MOCK_TEACHERS.find(t => t.id === teacherId);
+    return teacher ? teacher.name : 'Unknown Teacher';
+  };
+
+  // Helper function to get school name
+  const getSchoolName = (schoolId: string) => {
+    const school = MOCK_SCHOOLS.find(s => s.id === schoolId);
+    return school ? school.name : 'Unknown School';
+  };
 
   if (!user) return null;
 
@@ -55,100 +92,59 @@ const HeadmasterDashboard = () => {
           <p className="text-muted-foreground">
             {school ? `${school.name}, ${school.district}` : 'Loading school information...'}
           </p>
+          {!isConnected && (
+            <p className="text-amber-600 mt-2 text-sm">
+              ⚠️ Database connection issue. Some features may be limited.
+            </p>
+          )}
         </div>
         
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
           {/* Pending Requests Card */}
           <DashboardCard
-            title="Pending Transfer Requests"
+            title="Pending Requests"
             icon={<File className="h-4 w-4 text-muted-foreground" />}
-          >
-            {pendingRequests.length > 0 ? (
-              <div className="space-y-3">
-                <p className="text-2xl font-bold">{pendingRequests.length}</p>
-                <p className="text-sm text-muted-foreground">
-                  Teachers waiting for your approval
-                </p>
-                <Button asChild variant="default" size="sm" className="w-full">
-                  <Link to="/headmaster/requests">
-                    <span>Review Requests</span>
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Link>
-                </Button>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                <p className="text-2xl font-bold">0</p>
-                <p className="text-sm text-muted-foreground">No pending transfer requests</p>
-                <Button asChild variant="outline" size="sm" className="w-full">
-                  <Link to="/headmaster/requests">
-                    <span>View All Requests</span>
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Link>
-                </Button>
-              </div>
-            )}
-          </DashboardCard>
+            value={pendingRequests.length.toString()}
+            description="Teachers waiting for your approval"
+            linkText="Review Requests"
+            linkHref="/headmaster/requests"
+          />
+          
+          {/* Approved & Forwarded Card */}
+          <DashboardCard
+            title="Approved & Forwarded"
+            icon={<ArrowRight className="h-4 w-4 text-muted-foreground" />}
+            value={forwardedRequests.length.toString()}
+            description="Requests sent to Admin"
+            linkText="View History"
+            linkHref="/headmaster/history"
+          />
+          
+          {/* Rejected Requests Card */}
+          <DashboardCard
+            title="Rejected Requests"
+            icon={<File className="h-4 w-4 text-muted-foreground" />}
+            value={rejectedRequests.length.toString()}
+            description="Transfer requests rejected"
+            linkText="View History"
+            linkHref="/headmaster/history"
+          />
           
           {/* Teachers Card */}
           <DashboardCard
-            title="School Teachers"
+            title="Teachers in My School"
             icon={<Users className="h-4 w-4 text-muted-foreground" />}
-          >
-            <div className="space-y-3">
-              <p className="text-2xl font-bold">{teachers.length}</p>
-              <p className="text-sm text-muted-foreground">
-                Teachers currently at {school?.name}
-              </p>
-              <div className="space-y-1">
-                {teachers.slice(0, 3).map(teacher => (
-                  <div key={teacher.id} className="flex items-center text-sm">
-                    <span className="h-2 w-2 rounded-full bg-primary mr-2"></span>
-                    <span>{teacher.name}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </DashboardCard>
-          
-          {/* School Info Card */}
-          <DashboardCard
-            title="School Information"
-            icon={<SchoolIcon className="h-4 w-4 text-muted-foreground" />}
-          >
-            {school ? (
-              <div className="space-y-3">
-                <div>
-                  <p className="text-sm font-medium">School Type</p>
-                  <p className="text-sm text-muted-foreground capitalize">
-                    {school.type}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium">District</p>
-                  <p className="text-sm text-muted-foreground">
-                    {school.district}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium">Address</p>
-                  <p className="text-sm text-muted-foreground">
-                    {school.address}
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <div className="text-center py-6">
-                <p className="text-muted-foreground">School information unavailable</p>
-              </div>
-            )}
-          </DashboardCard>
+            value={teachers.length.toString()}
+            description={`Teachers at ${school?.name || 'your school'}`}
+            linkText="View All"
+            linkHref="/headmaster/teachers"
+          />
         </div>
 
-        {/* Recent Transfer Requests */}
+        {/* Recent Activity Feed */}
         <div className="mt-8">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold">Recent Transfer Requests</h2>
+            <h2 className="text-xl font-semibold">Recent Activity</h2>
             <Button asChild variant="outline" size="sm">
               <Link to="/headmaster/requests">View All Requests</Link>
             </Button>
@@ -159,27 +155,25 @@ const HeadmasterDashboard = () => {
                 <thead className="bg-muted/50">
                   <tr>
                     <th className="px-4 py-3 text-left">Teacher</th>
-                    <th className="px-4 py-3 text-left">Submitted</th>
+                    <th className="px-4 py-3 text-left">Date Updated</th>
                     <th className="px-4 py-3 text-left">Destination</th>
                     <th className="px-4 py-3 text-left">Status</th>
                     <th className="px-4 py-3 text-right">Action</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {MOCK_TRANSFER_REQUESTS
-                    .filter(req => req.fromSchoolId === school?.id)
-                    .slice(0, 5)
-                    .map((request) => {
-                      const teacher = MOCK_TEACHERS.find(t => t.id === request.teacherId);
+                  {recentActivity.length > 0 ? (
+                    recentActivity.map((request) => {
+                      const teacherName = getTeacherName(request.teacherId);
                       const destination = request.toSchoolId 
-                        ? MOCK_SCHOOLS.find(s => s.id === request.toSchoolId)?.name 
+                        ? getSchoolName(request.toSchoolId)
                         : request.toDistrict || 'Unspecified';
                       
                       return (
                         <tr key={request.id} className="border-t">
-                          <td className="px-4 py-3">{teacher?.name || 'Unknown'}</td>
+                          <td className="px-4 py-3">{teacherName}</td>
                           <td className="px-4 py-3">
-                            {new Date(request.submittedAt).toLocaleDateString()}
+                            {new Date(request.updatedAt).toLocaleDateString()}
                           </td>
                           <td className="px-4 py-3">{destination}</td>
                           <td className="px-4 py-3">
@@ -194,11 +188,11 @@ const HeadmasterDashboard = () => {
                           </td>
                         </tr>
                       );
-                    })}
-                  {MOCK_TRANSFER_REQUESTS.filter(req => req.fromSchoolId === school?.id).length === 0 && (
+                    })
+                  ) : (
                     <tr>
                       <td colSpan={5} className="px-4 py-6 text-center text-muted-foreground">
-                        No transfer requests found
+                        No recent transfer requests
                       </td>
                     </tr>
                   )}
@@ -206,6 +200,30 @@ const HeadmasterDashboard = () => {
               </table>
             </div>
           </div>
+        </div>
+
+        {/* Shortcuts / Action Links */}
+        <div className="mt-8 grid gap-4 md:grid-cols-2">
+          <Button asChild size="lg" className="h-auto py-4">
+            <Link to="/headmaster/requests">
+              <div className="flex flex-col items-start">
+                <span className="text-base font-semibold">Review Requests</span>
+                <span className="text-xs text-muted-foreground mt-1">
+                  Process pending teacher transfer requests
+                </span>
+              </div>
+            </Link>
+          </Button>
+          <Button asChild size="lg" variant="outline" className="h-auto py-4">
+            <Link to="/headmaster/history">
+              <div className="flex flex-col items-start">
+                <span className="text-base font-semibold">Action History</span>
+                <span className="text-xs text-muted-foreground mt-1">
+                  View past decisions on transfer requests
+                </span>
+              </div>
+            </Link>
+          </Button>
         </div>
       </main>
     </div>

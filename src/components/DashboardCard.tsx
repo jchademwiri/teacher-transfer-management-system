@@ -3,6 +3,7 @@ import React, { ReactNode } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { Link } from "react-router-dom";
+import { ArrowRight } from "lucide-react";
 
 interface DashboardCardProps {
   title: string;
@@ -37,8 +38,12 @@ export function DashboardCard({
             {value && <p className="text-2xl font-bold">{value}</p>}
             {description && <p className="text-xs text-muted-foreground">{description}</p>}
             {linkText && linkHref && (
-              <Link to={linkHref} className="text-xs text-blue-500 hover:underline">
+              <Link 
+                to={linkHref} 
+                className="flex items-center text-xs text-primary hover:underline mt-2"
+              >
                 {linkText}
+                <ArrowRight className="h-3 w-3 ml-1" />
               </Link>
             )}
           </div>
