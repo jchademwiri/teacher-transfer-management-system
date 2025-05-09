@@ -5,7 +5,7 @@ import { User, UserRole } from '@/types';
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<User>;
   logout: () => Promise<void>;
   isAuthenticated: boolean;
   role: UserRole | null;
@@ -14,7 +14,7 @@ interface AuthContextType {
 const defaultContext: AuthContextType = {
   user: null,
   isLoading: true,
-  login: async () => {},
+  login: async () => { throw new Error('Not implemented'); },
   logout: async () => {},
   isAuthenticated: false,
   role: null,
@@ -70,7 +70,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       try {
         const storedUser = localStorage.getItem('user');
         if (storedUser) {
-          setUser(JSON.parse(storedUser));
+          const parsedUser = JSON.parse(storedUser);
+          console.log('Restored user session:', parsedUser); // Debug log
+          setUser(parsedUser);
         }
       } catch (error) {
         console.error('Session check failed', error);
@@ -82,7 +84,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     checkSession();
   }, []);
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string): Promise<User> => {
     setIsLoading(true);
     try {
       // In a real implementation, this would call Supabase auth
@@ -93,9 +95,11 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         throw new Error('Invalid credentials');
       }
       
+      console.log('Logging in user:', foundUser); // Debug log
       setUser(foundUser);
       localStorage.setItem('user', JSON.stringify(foundUser));
       
+      return foundUser;
     } catch (error) {
       console.error('Login failed', error);
       throw error;

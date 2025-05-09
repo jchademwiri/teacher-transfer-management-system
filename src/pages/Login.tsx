@@ -21,7 +21,7 @@ const LoginPage = () => {
     setIsLoading(true);
 
     try {
-      await login(email, password);
+      const result = await login(email, password);
       
       // Show success notification
       toast({
@@ -30,7 +30,8 @@ const LoginPage = () => {
         variant: "default",
       });
       
-      // Let auth context handle the redirect
+      // Redirect based on user role
+      navigate('/');
     } catch (error) {
       toast({
         title: "Login failed",

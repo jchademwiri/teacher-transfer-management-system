@@ -15,11 +15,19 @@ const Index = () => {
       return;
     }
 
+    console.log('User role:', role); // Debug log to verify role is being detected
+
     // Redirect based on user role
-    if (role === 'teacher') navigate('/dashboard');
-    else if (role === 'headmaster') navigate('/headmaster');
-    else if (role === 'admin') navigate('/admin');
-    else navigate('/login'); // Fallback if role is unknown
+    if (role === 'teacher') {
+      navigate('/dashboard');
+    } else if (role === 'headmaster') {
+      navigate('/headmaster');
+    } else if (role === 'admin') {
+      navigate('/admin');
+    } else {
+      console.log('Unknown role:', role); // Debug log for unknown roles
+      navigate('/login'); // Fallback if role is unknown
+    }
   }, [isAuthenticated, role, isLoading, navigate]);
 
   return (
