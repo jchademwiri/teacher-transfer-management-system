@@ -1,4 +1,3 @@
-
 import { School, Subject, TransferRequest, Teacher } from '@/types';
 
 export const MOCK_SCHOOLS: School[] = [
@@ -163,3 +162,8 @@ export const MOCK_TRANSFER_REQUESTS: TransferRequest[] = [
     updatedAt: new Date(Date.now() - 50 * 24 * 60 * 60 * 1000).toISOString(),
   }
 ];
+
+// Add pending requests as a filtered subset of transfer requests
+export const MOCK_PENDING_REQUESTS = MOCK_TRANSFER_REQUESTS.filter(
+  req => req.status === 'pending_head_approval' || req.status === 'forwarded_to_admin'
+);

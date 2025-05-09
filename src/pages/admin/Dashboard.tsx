@@ -11,10 +11,11 @@ import {
   Database 
 } from 'lucide-react';
 import { 
-  MOCK_PENDING_REQUESTS, 
+  MOCK_PENDING_REQUESTS,
   MOCK_SCHOOLS, 
   MOCK_SUBJECTS, 
-  MOCK_TEACHERS 
+  MOCK_TEACHERS,
+  MOCK_TRANSFER_REQUESTS
 } from '@/mock/data';
 import { TransferRequest, Teacher } from '@/types';
 
@@ -26,9 +27,21 @@ const AdminDashboard = () => {
   const [totalSchools, setTotalSchools] = useState(0);
   const [totalSubjects, setTotalSubjects] = useState(0);
 
+  // Helper function to get school name by ID
+  const getSchoolName = (schoolId: string): string => {
+    const school = MOCK_SCHOOLS.find(s => s.id === schoolId);
+    return school ? school.name : 'Unknown School';
+  };
+
+  // Helper function to get teacher name by ID
+  const getTeacherName = (teacherId: string): string => {
+    const teacher = MOCK_TEACHERS.find(t => t.id === teacherId);
+    return teacher ? teacher.name : 'Unknown Teacher';
+  };
+
   useEffect(() => {
     // In a real app, this would fetch data from Supabase
-    setPendingRequests(MOCK_PENDING_REQUESTS.filter(req => req.status === 'forwarded' || req.status === 'pending'));
+    setPendingRequests(MOCK_PENDING_REQUESTS);
     setTotalTeachers(MOCK_TEACHERS.length);
     setTotalSchools(MOCK_SCHOOLS.length);
     setTotalSubjects(MOCK_SUBJECTS.length);
@@ -111,21 +124,27 @@ const AdminDashboard = () => {
           <CardContent>
             {pendingRequests.length > 0 ? (
               <div className="space-y-4">
-                {pendingRequests.slice(0, 5).map((request) => (
-                  <div key={request.id} className="flex justify-between items-center border-b pb-4">
-                    <div>
-                      <p className="font-medium">{request.teacherName}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {request.currentSchool} → {request.targetSchool}
-                      </p>
+                {pendingRequests.slice(0, 5).map((request) => {
+                  const teacherName = getTeacherName(request.teacherId);
+                  const fromSchool = getSchoolName(request.fromSchoolId);
+                  const toSchool = request.toSchoolId ? getSchoolName(request.toSchoolId) : request.toDistrict || 'Unspecified';
+                  
+                  return (
+                    <div key={request.id} className="flex justify-between items-center border-b pb-4">
+                      <div>
+                        <p className="font-medium">{teacherName}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {fromSchool} → {toSchool}
+                        </p>
+                      </div>
+                      <div className="flex items-center">
+                        <span className={`status-badge status-${request.status}`}>
+                          {request.status.charAt(0).toUpperCase() + request.status.slice(1).replace(/_/g, ' ')}
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex items-center">
-                      <span className={`status-badge status-${request.status}`}>
-                        {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
-                      </span>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               <p className="text-muted-foreground">No pending requests.</p>
