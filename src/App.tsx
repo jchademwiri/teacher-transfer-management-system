@@ -8,6 +8,7 @@ import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 
 // Pages
 import Login from "@/pages/Login";
+import Index from "@/pages/Index";
 import Dashboard from "@/pages/dashboard/Dashboard";
 import Transfer from "@/pages/dashboard/Transfer";
 import TeacherHistory from "@/pages/dashboard/History";
@@ -72,12 +73,7 @@ const App = () => {
               <Route path="/login" element={<Login />} />
               
               {/* Root redirect based on role */}
-              <Route 
-                path="/" 
-                element={
-                  <RoleBasedRedirect />
-                } 
-              />
+              <Route path="/" element={<Index />} />
               
               {/* Teacher routes */}
               <Route 
@@ -155,26 +151,6 @@ const App = () => {
       </TooltipProvider>
     </QueryClientProvider>
   );
-};
-
-// Helper component to redirect based on user role
-const RoleBasedRedirect = () => {
-  const { role, isAuthenticated, isLoading } = useAuth();
-  
-  if (isLoading) {
-    return <div className="flex h-screen items-center justify-center">Loading...</div>;
-  }
-  
-  if (!isAuthenticated) {
-    return <Navigate to="/login" />;
-  }
-  
-  if (role === 'teacher') return <Navigate to="/dashboard" />;
-  if (role === 'headmaster') return <Navigate to="/headmaster" />;
-  if (role === 'admin') return <Navigate to="/admin" />;
-  
-  // Default fallback
-  return <Navigate to="/login" />;
 };
 
 export default App;
