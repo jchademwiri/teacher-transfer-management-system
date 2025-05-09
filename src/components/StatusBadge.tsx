@@ -11,35 +11,35 @@ interface StatusBadgeProps {
 const statusConfig: Record<RequestStatus, { label: string; className: string }> = {
   submitted: { 
     label: 'Submitted', 
-    className: 'status-submitted' 
+    className: 'bg-blue-100 text-blue-800' 
   },
   pending_head_approval: { 
     label: 'Pending Head Approval', 
-    className: 'status-pending' 
+    className: 'bg-yellow-100 text-yellow-800' 
   },
   rejected_by_headmaster: { 
     label: 'Rejected by Headmaster', 
-    className: 'status-rejected' 
+    className: 'bg-red-100 text-red-800' 
   },
   forwarded_to_admin: { 
     label: 'Forwarded to Admin', 
-    className: 'status-forwarded' 
+    className: 'bg-yellow-100 text-yellow-800' 
   },
   rejected_by_admin: { 
     label: 'Rejected by Admin', 
-    className: 'status-rejected' 
+    className: 'bg-red-100 text-red-800' 
   },
   approved_by_admin: { 
     label: 'Approved', 
-    className: 'status-approved' 
+    className: 'bg-green-100 text-green-800' 
   },
   withdrawn_by_teacher: { 
     label: 'Withdrawn', 
-    className: 'status-withdrawn' 
+    className: 'bg-gray-100 text-gray-800' 
   },
   expired: { 
     label: 'Expired', 
-    className: 'status-expired' 
+    className: 'bg-gray-100 text-gray-800' 
   },
 };
 
@@ -47,7 +47,7 @@ export function StatusBadge({ status, className }: StatusBadgeProps) {
   const { label, className: badgeClass } = statusConfig[status];
   
   return (
-    <span className={cn('status-badge', badgeClass, className)}>
+    <span className={cn('px-2 py-1 text-xs font-medium rounded-full', badgeClass, className)}>
       {label}
     </span>
   );

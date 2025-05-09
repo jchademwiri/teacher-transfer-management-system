@@ -15,13 +15,14 @@ const TeacherDashboard = () => {
   const [activeRequest, setActiveRequest] = useState<TransferRequest | null>(null);
   const [school, setSchool] = useState<School | null>(null);
   const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [recentNotifications, setRecentNotifications] = useState<{ title: string, message: string, date: string, type: string }[]>([]);
   
   useEffect(() => {
     // Get the teacher's active transfer request
     if (user) {
       const request = MOCK_TRANSFER_REQUESTS.find(
         req => req.teacherId === user.id && 
-        ['submitted', 'pending_head_approval', 'forwarded_to_admin'].includes(req.status)
+        ['pending_head_approval', 'forwarded_to_admin'].includes(req.status)
       );
       
       setActiveRequest(request || null);
@@ -33,12 +34,45 @@ const TeacherDashboard = () => {
       }
       
       // Get the teacher's subjects if we had subjectIds in the user object
-      // For now, we'll just show a few subjects
-      setSubjects(MOCK_SUBJECTS.slice(0, 3));
+      if ((user as any).subjectIds) {
+        const teacherSubjects = MOCK_SUBJECTS.filter(s => 
+          (user as any).subjectIds.includes(s.id)
+        );
+        setSubjects(teacherSubjects.length > 0 ? teacherSubjects : MOCK_SUBJECTS.slice(0, 3));
+      } else {
+        setSubjects(MOCK_SUBJECTS.slice(0, 3));
+      }
+
+      // Mock recent notifications
+      setRecentNotifications([
+        {
+          title: "Transfer Request Update",
+          message: "Your transfer request has been forwarded to the admin.",
+          date: "2 days ago",
+          type: "info"
+        },
+        {
+          title: "Profile Updated",
+          message: "Your profile information has been updated.",
+          date: "1 week ago",
+          type: "success"
+        }
+      ]);
     }
   }, [user]);
 
   if (!user) return null;
+
+  // Helper function to get school name by ID
+  const getSchoolName = (schoolId: string) => {
+    const school = MOCK_SCHOOLS.find(s => s.id === schoolId);
+    return school ? school.name : "Unknown School";
+  };
+
+  // Format date for better display
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString();
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -54,7 +88,7 @@ const TeacherDashboard = () => {
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {/* Active Transfer Request Card */}
           <DashboardCard
-            title="Active Transfer Request"
+            title="Transfer Request Status"
             icon={<File className="h-4 w-4 text-muted-foreground" />}
           >
             {activeRequest ? (
@@ -62,7 +96,7 @@ const TeacherDashboard = () => {
                 <div className="flex items-center justify-between">
                   <StatusBadge status={activeRequest.status} />
                   <span className="text-xs text-muted-foreground">
-                    {new Date(activeRequest.submittedAt).toLocaleDateString()}
+                    Submitted: {formatDate(activeRequest.submittedAt)}
                   </span>
                 </div>
                 <p className="line-clamp-2 text-sm">
@@ -71,16 +105,23 @@ const TeacherDashboard = () => {
                 <p className="text-sm">
                   <strong>To:</strong> {
                     activeRequest.toSchoolId 
-                      ? MOCK_SCHOOLS.find(s => s.id === activeRequest.toSchoolId)?.name || 'Unknown School'
+                      ? getSchoolName(activeRequest.toSchoolId)
                       : activeRequest.toDistrict || 'Unspecified'
                   }
                 </p>
-                <Button asChild variant="outline" size="sm" className="w-full">
-                  <Link to="/dashboard/transfer">
-                    <span>View Details</span>
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Link>
-                </Button>
+                {activeRequest.headmasterComment && (
+                  <p className="text-sm">
+                    <strong>Headmaster:</strong> {activeRequest.headmasterComment}
+                  </p>
+                )}
+                <div className="pt-2">
+                  <Button asChild variant="outline" size="sm" className="w-full">
+                    <Link to="/dashboard/transfer">
+                      <span>View Details</span>
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Link>
+                  </Button>
+                </div>
               </div>
             ) : (
               <div className="space-y-3">
@@ -100,7 +141,7 @@ const TeacherDashboard = () => {
             <div className="space-y-4">
               <div>
                 <p className="text-sm font-medium">EC Number</p>
-                <p className="text-sm text-muted-foreground">{user.ecNumber || 'Not specified'}</p>
+                <p className="text-sm text-muted-foreground">{(user as any).ecNumber || 'Not specified'}</p>
               </div>
               <div>
                 <p className="text-sm font-medium">Teaching Level</p>
@@ -127,17 +168,13 @@ const TeacherDashboard = () => {
             icon={<Bell className="h-4 w-4 text-muted-foreground" />}
           >
             <div className="space-y-4">
-              {/* Mock notifications */}
-              <div className="border-l-4 border-info pl-3 py-1">
-                <p className="text-sm font-medium">Transfer Request Update</p>
-                <p className="text-xs text-muted-foreground">Your transfer request has been forwarded to the admin.</p>
-                <p className="text-xs text-muted-foreground mt-1">2 days ago</p>
-              </div>
-              <div className="border-l-4 border-success pl-3 py-1">
-                <p className="text-sm font-medium">Profile Updated</p>
-                <p className="text-xs text-muted-foreground">Your profile information has been updated.</p>
-                <p className="text-xs text-muted-foreground mt-1">1 week ago</p>
-              </div>
+              {recentNotifications.map((notification, index) => (
+                <div key={index} className={`border-l-4 border-${notification.type} pl-3 py-1`}>
+                  <p className="text-sm font-medium">{notification.title}</p>
+                  <p className="text-xs text-muted-foreground">{notification.message}</p>
+                  <p className="text-xs text-muted-foreground mt-1">{notification.date}</p>
+                </div>
+              ))}
               <Button asChild variant="outline" size="sm" className="w-full">
                 <Link to="/notifications">
                   <span>View All Notifications</span>
@@ -169,17 +206,17 @@ const TeacherDashboard = () => {
                 <tbody>
                   {MOCK_TRANSFER_REQUESTS
                     .filter(req => req.teacherId === user.id && 
-                           !['submitted', 'pending_head_approval', 'forwarded_to_admin'].includes(req.status))
+                           !['pending_head_approval', 'forwarded_to_admin'].includes(req.status))
                     .slice(0, 3)
                     .map((request) => {
                       const destinationSchool = request.toSchoolId 
-                        ? MOCK_SCHOOLS.find(s => s.id === request.toSchoolId)?.name 
+                        ? getSchoolName(request.toSchoolId)
                         : request.toDistrict || 'Unspecified';
                       
                       return (
                         <tr key={request.id} className="border-t">
                           <td className="px-4 py-3">
-                            {new Date(request.submittedAt).toLocaleDateString()}
+                            {formatDate(request.submittedAt)}
                           </td>
                           <td className="px-4 py-3">{destinationSchool}</td>
                           <td className="px-4 py-3">
@@ -189,7 +226,7 @@ const TeacherDashboard = () => {
                       );
                     })}
                   {MOCK_TRANSFER_REQUESTS.filter(req => req.teacherId === user.id && 
-                    !['submitted', 'pending_head_approval', 'forwarded_to_admin'].includes(req.status)).length === 0 && (
+                    !['pending_head_approval', 'forwarded_to_admin'].includes(req.status)).length === 0 && (
                     <tr>
                       <td colSpan={3} className="px-4 py-6 text-center text-muted-foreground">
                         No past transfer requests found
