@@ -6,7 +6,7 @@ import { StatusBadge } from '@/components/StatusBadge';
 import { DashboardCard } from '@/components/DashboardCard';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
-import { File, Users, Bell, School, ArrowRight } from 'lucide-react';
+import { File, Users, Bell, School as SchoolIcon, ArrowRight } from 'lucide-react';
 import { 
   MOCK_SCHOOLS, 
   MOCK_SUBJECTS, 
@@ -114,7 +114,7 @@ const HeadmasterDashboard = () => {
           {/* School Info Card */}
           <DashboardCard
             title="School Information"
-            icon={<School className="h-4 w-4 text-muted-foreground" />}
+            icon={<SchoolIcon className="h-4 w-4 text-muted-foreground" />}
           >
             {school ? (
               <div className="space-y-3">
