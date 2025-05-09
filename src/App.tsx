@@ -5,6 +5,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { AppLayout } from "@/components/AppLayout";
 
 // Pages
 import Login from "@/pages/Login";
@@ -55,8 +56,8 @@ const ProtectedRoute = ({ element, allowedRoles = [] }: ProtectedRouteProps) => 
     if (role === 'admin') return <Navigate to="/admin" />;
   }
   
-  // Otherwise render the protected content
-  return <>{element}</>;
+  // Otherwise render the protected content in the layout
+  return <AppLayout>{element}</AppLayout>;
 };
 
 // Main App Component
