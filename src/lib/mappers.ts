@@ -16,7 +16,8 @@ export const mapTransferRequest = (data: any): TransferRequest => ({
   headmasterActionAt: data.headmaster_action_at || undefined,
   adminActionAt: data.admin_action_at || undefined,
   updatedAt: data.updated_at,
-  teachers: data.teachers, // Keep any joined teacher data
+  // Store joined teacher data in a separate property if it exists
+  _teachers: data.teachers || undefined, 
 });
 
 export const mapSchool = (data: any): School => ({

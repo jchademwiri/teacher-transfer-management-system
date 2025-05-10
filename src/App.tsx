@@ -17,6 +17,7 @@ import HeadmasterDashboard from "@/pages/headmaster/Dashboard";
 import HeadmasterRequests from "@/pages/headmaster/Requests";
 import HeadmasterRequestDetail from "@/pages/headmaster/RequestDetail";
 import HeadmasterHistory from "@/pages/headmaster/History";
+import HeadmasterTeachers from "@/pages/headmaster/Teachers";
 import AdminDashboard from "@/pages/admin/Dashboard";
 import AdminRequests from "@/pages/admin/Requests";
 import AdminRequestDetail from "@/pages/admin/RequestDetail";
@@ -106,6 +107,11 @@ const App = () => {
               <Route 
                 path="/headmaster/history" 
                 element={<ProtectedRoute element={<HeadmasterHistory />} allowedRoles={['headmaster']} />} 
+              />
+              {/* Add new route for teachers management */}
+              <Route 
+                path="/headmaster/teachers" 
+                element={<ProtectedRoute element={<HeadmasterTeachers />} allowedRoles={['headmaster']} />} 
               />
               
               {/* Admin routes */}

@@ -30,8 +30,8 @@ const HeadmasterDashboard = () => {
   // Format activity data for the RecentActivityTable component
   const formattedActivity = recentActivity.map((request) => {
     // Use getTeacherName helper to get teacher name, handling both data formats
-    const teacherName = request.teachers ? 
-      (request.teachers as any).name : 
+    const teacherName = request._teachers ? 
+      (request._teachers as any).name : 
       getTeacherName(request.teacherId);
       
     return {
@@ -95,13 +95,23 @@ const HeadmasterDashboard = () => {
         />
 
         {/* Shortcuts / Action Links */}
-        <div className="mt-8 grid gap-4 md:grid-cols-2">
+        <div className="mt-8 grid gap-4 md:grid-cols-3">
           <Button asChild size="lg" className="h-auto py-4">
             <Link to="/headmaster/requests">
               <div className="flex flex-col items-start">
                 <span className="text-base font-semibold">Review Requests</span>
                 <span className="text-xs text-muted-foreground mt-1">
                   Process pending teacher transfer requests
+                </span>
+              </div>
+            </Link>
+          </Button>
+          <Button asChild size="lg" variant="outline" className="h-auto py-4">
+            <Link to="/headmaster/teachers">
+              <div className="flex flex-col items-start">
+                <span className="text-base font-semibold">Manage Teachers</span>
+                <span className="text-xs text-muted-foreground mt-1">
+                  View and manage teachers in your school
                 </span>
               </div>
             </Link>
