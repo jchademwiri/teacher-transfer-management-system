@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { TransferRequest, School, Teacher } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
+import { mapTransferRequest, mapSchool, mapTeacher } from '@/lib/mappers';
 
 export function useHeadmasterDashboard() {
   const { user } = useAuth();
@@ -48,7 +49,7 @@ export function useHeadmasterDashboard() {
           schoolData = schoolByUserId;
         }
 
-        setSchool(schoolData || null);
+        setSchool(schoolData ? mapSchool(schoolData) : null);
         
         if (schoolData) {
           // Get pending transfer requests for this school
@@ -58,7 +59,7 @@ export function useHeadmasterDashboard() {
             .eq('from_school_id', schoolData.id)
             .eq('status', 'pending_head_approval');
             
-          setPendingRequests(pendingData || []);
+          setPendingRequests(pendingData ? pendingData.map(mapTransferRequest) : []);
           
           // Get forwarded requests
           const { data: forwardedData } = await supabase
@@ -67,7 +68,7 @@ export function useHeadmasterDashboard() {
             .eq('from_school_id', schoolData.id)
             .eq('status', 'forwarded_to_admin');
             
-          setForwardedRequests(forwardedData || []);
+          setForwardedRequests(forwardedData ? forwardedData.map(mapTransferRequest) : []);
           
           // Get rejected requests
           const { data: rejectedData } = await supabase
@@ -76,7 +77,7 @@ export function useHeadmasterDashboard() {
             .eq('from_school_id', schoolData.id)
             .eq('status', 'rejected_by_headmaster');
             
-          setRejectedRequests(rejectedData || []);
+          setRejectedRequests(rejectedData ? rejectedData.map(mapTransferRequest) : []);
           
           // Get teachers at this school
           const { data: teachersData } = await supabase
@@ -84,7 +85,7 @@ export function useHeadmasterDashboard() {
             .select('*')
             .eq('school_id', schoolData.id);
             
-          setTeachers(teachersData || []);
+          setTeachers(teachersData ? teachersData.map(mapTeacher) : []);
           
           // Get recent activity
           const { data: recentData } = await supabase
@@ -94,7 +95,7 @@ export function useHeadmasterDashboard() {
             .order('updated_at', { ascending: false })
             .limit(5);
             
-          setRecentActivity(recentData || []);
+          setRecentActivity(recentData ? recentData.map(mapTransferRequest) : []);
         }
       } catch (err) {
         console.error('Error fetching dashboard data:', err);

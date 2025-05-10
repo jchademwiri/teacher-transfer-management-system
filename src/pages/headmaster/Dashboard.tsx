@@ -29,13 +29,17 @@ const HeadmasterDashboard = () => {
 
   // Format activity data for the RecentActivityTable component
   const formattedActivity = recentActivity.map((request) => {
-    const teacherName = request.teachers ? request.teachers.name : getTeacherName(request.teacher_id);
+    // Use getTeacherName helper to get teacher name, handling both data formats
+    const teacherName = request.teachers ? 
+      (request.teachers as any).name : 
+      getTeacherName(request.teacherId);
+      
     return {
       id: request.id,
       teacherName,
-      teacherId: request.teacher_id,
-      date: formatDate(request.updated_at),
-      destination: request.to_school_id ? request.to_school_id : request.to_district || 'Unspecified',
+      teacherId: request.teacherId,
+      date: formatDate(request.updatedAt),
+      destination: request.toSchoolId ? request.toSchoolId : request.toDistrict || 'Unspecified',
       status: request.status
     };
   });
@@ -116,6 +120,6 @@ const HeadmasterDashboard = () => {
       </main>
     </div>
   );
-};
+}
 
 export default HeadmasterDashboard;

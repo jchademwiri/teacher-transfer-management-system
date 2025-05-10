@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { TransferRequest, School, Subject } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
+import { mapTransferRequest, mapSchool, mapSubject } from '@/lib/mappers';
 
 export function useTeacherDashboard() {
   const { user } = useAuth();
@@ -54,7 +55,7 @@ export function useTeacherDashboard() {
             .limit(1)
             .single();
 
-          setActiveRequest(requestData || null);
+          setActiveRequest(requestData ? mapTransferRequest(requestData) : null);
 
           // Get teacher's school
           if (teacherData.school_id) {
@@ -64,7 +65,7 @@ export function useTeacherDashboard() {
               .eq('id', teacherData.school_id)
               .single();
 
-            setSchool(schoolData || null);
+            setSchool(schoolData ? mapSchool(schoolData) : null);
           }
 
           // Get teacher's subjects
@@ -80,7 +81,7 @@ export function useTeacherDashboard() {
               .select('*')
               .in('id', subjectIds);
 
-            setSubjects(subjectsData || []);
+            setSubjects(subjectsData ? subjectsData.map(mapSubject) : []);
           } else {
             // Fallback to some default subjects if none assigned
             const { data: defaultSubjects } = await supabase
@@ -88,7 +89,7 @@ export function useTeacherDashboard() {
               .select('*')
               .limit(3);
 
-            setSubjects(defaultSubjects || []);
+            setSubjects(defaultSubjects ? defaultSubjects.map(mapSubject) : []);
           }
 
           // Get notifications
