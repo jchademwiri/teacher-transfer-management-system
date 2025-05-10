@@ -9,6 +9,229 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      notifications: {
+        Row: {
+          created_at: string
+          id: string
+          message: string
+          read: boolean
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message: string
+          read?: boolean
+          title: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message?: string
+          read?: boolean
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      schools: {
+        Row: {
+          address: string | null
+          created_at: string
+          district: string
+          headmaster_id: string | null
+          id: string
+          name: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string
+          district: string
+          headmaster_id?: string | null
+          id?: string
+          name: string
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          created_at?: string
+          district?: string
+          headmaster_id?: string | null
+          id?: string
+          name?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      subjects: {
+        Row: {
+          created_at: string
+          id: string
+          level: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          level: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          level?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      teacher_subjects: {
+        Row: {
+          id: string
+          subject_id: string
+          teacher_id: string
+        }
+        Insert: {
+          id?: string
+          subject_id: string
+          teacher_id: string
+        }
+        Update: {
+          id?: string
+          subject_id?: string
+          teacher_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "teacher_subjects_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teacher_subjects_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "teachers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      teachers: {
+        Row: {
+          created_at: string
+          ec_number: string
+          id: string
+          level: string
+          name: string
+          school_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          ec_number: string
+          id?: string
+          level: string
+          name: string
+          school_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          ec_number?: string
+          id?: string
+          level?: string
+          name?: string
+          school_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      transfer_requests: {
+        Row: {
+          admin_action_at: string | null
+          admin_comment: string | null
+          from_school_id: string
+          headmaster_action_at: string | null
+          headmaster_comment: string | null
+          id: string
+          reason: string
+          status: string
+          submitted_at: string
+          teacher_id: string
+          to_district: string | null
+          to_school_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          admin_action_at?: string | null
+          admin_comment?: string | null
+          from_school_id: string
+          headmaster_action_at?: string | null
+          headmaster_comment?: string | null
+          id?: string
+          reason: string
+          status: string
+          submitted_at?: string
+          teacher_id: string
+          to_district?: string | null
+          to_school_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          admin_action_at?: string | null
+          admin_comment?: string | null
+          from_school_id?: string
+          headmaster_action_at?: string | null
+          headmaster_comment?: string | null
+          id?: string
+          reason?: string
+          status?: string
+          submitted_at?: string
+          teacher_id?: string
+          to_district?: string | null
+          to_school_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transfer_requests_from_school_id_fkey"
+            columns: ["from_school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transfer_requests_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "teachers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transfer_requests_to_school_id_fkey"
+            columns: ["to_school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       users: {
         Row: {
           avatar_url: string | null

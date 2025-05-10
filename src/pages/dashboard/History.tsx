@@ -1,84 +1,45 @@
 
-import { useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import React from 'react';
 import { MainNavigation } from '@/components/MainNavigation';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { StatusBadge } from '@/components/StatusBadge';
 import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow 
 } from "@/components/ui/table";
 import { 
-  Pagination, 
-  PaginationContent, 
-  PaginationItem, 
-  PaginationLink, 
-  PaginationNext, 
-  PaginationPrevious 
+  Pagination, PaginationContent, PaginationItem, PaginationLink, 
+  PaginationNext, PaginationPrevious 
 } from "@/components/ui/pagination";
-import { 
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import { MOCK_SCHOOLS, MOCK_TRANSFER_REQUESTS } from '@/mock/data';
-import { RequestStatus, TransferRequest } from '@/types';
 
-const statusOptions: { value: RequestStatus | 'all', label: string }[] = [
-  { value: 'all', label: 'All Statuses' },
-  { value: 'approved_by_admin', label: 'Approved' },
-  { value: 'rejected_by_headmaster', label: 'Rejected by Headmaster' },
-  { value: 'rejected_by_admin', label: 'Rejected by Admin' },
-  { value: 'withdrawn_by_teacher', label: 'Withdrawn' },
-];
+// Import hooks and components
+import { useHistoryPage, defaultStatusOptions } from '@/hooks/use-history-page';
+import { FilterControls } from '@/components/history/FilterControls';
 
 const TeacherHistory = () => {
-  const { user } = useAuth();
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
-  const [itemsPerPage] = useState(5);
-  const [currentPage, setCurrentPage] = useState(1);
+  const {
+    statusFilter,
+    setStatusFilter,
+    sortOrder,
+    setSortOrder,
+    currentPage,
+    setCurrentPage,
+    totalPages,
+    paginatedRequests,
+    isLoading,
+    formatDate,
+    getDestination
+  } = useHistoryPage('teacher');
   
-  // Get the user's transfer request history from mock data
-  const teacherId = user?.id || '';
-  let requests = MOCK_TRANSFER_REQUESTS.filter(req => req.teacherId === teacherId);
-  
-  // Apply status filter
-  if (statusFilter !== 'all') {
-    requests = requests.filter(req => req.status === statusFilter);
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <MainNavigation />
+        <div className="container mx-auto py-8 px-4">
+          <p>Loading history...</p>
+        </div>
+      </div>
+    );
   }
-  
-  // Apply sort
-  requests.sort((a, b) => {
-    const dateA = new Date(a.submittedAt).getTime();
-    const dateB = new Date(b.submittedAt).getTime();
-    return sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
-  });
-  
-  // Pagination
-  const totalPages = Math.ceil(requests.length / itemsPerPage);
-  const paginatedRequests = requests.slice(
-    (currentPage - 1) * itemsPerPage, 
-    currentPage * itemsPerPage
-  );
-  
-  // Helper function to get school name by ID
-  const getSchoolName = (schoolId: string) => {
-    const school = MOCK_SCHOOLS.find(s => s.id === schoolId);
-    return school ? school.name : "Unknown School";
-  };
-  
-  // Format date for better display
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString();
-  };
   
   return (
     <div className="min-h-screen bg-background">
@@ -87,49 +48,13 @@ const TeacherHistory = () => {
       <div className="container mx-auto py-8 px-4">
         <h1 className="text-2xl font-bold mb-6">Transfer Request History</h1>
         
-        <div className="flex justify-between items-center mb-6">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <span className="text-sm">Status:</span>
-              <Select
-                value={statusFilter}
-                onValueChange={(value) => {
-                  setStatusFilter(value);
-                  setCurrentPage(1);
-                }}
-              >
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Filter by status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    {statusOptions.map(option => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="flex items-center gap-2">
-              <span className="text-sm">Sort:</span>
-              <Select
-                value={sortOrder}
-                onValueChange={(value) => setSortOrder(value as 'asc' | 'desc')}
-              >
-                <SelectTrigger className="w-[150px]">
-                  <SelectValue placeholder="Sort order" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="desc">Newest First</SelectItem>
-                  <SelectItem value="asc">Oldest First</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </div>
+        <FilterControls
+          statusFilter={statusFilter}
+          setStatusFilter={setStatusFilter}
+          sortOrder={sortOrder}
+          setSortOrder={setSortOrder}
+          statusOptions={defaultStatusOptions}
+        />
         
         {paginatedRequests.length > 0 ? (
           <Card>
@@ -146,16 +71,12 @@ const TeacherHistory = () => {
                 <TableBody>
                   {paginatedRequests.map((request) => (
                     <TableRow key={request.id} className="hover:bg-muted/50">
-                      <TableCell>{formatDate(request.submittedAt)}</TableCell>
-                      <TableCell>
-                        {request.toSchoolId 
-                          ? getSchoolName(request.toSchoolId)
-                          : request.toDistrict || 'Unspecified'}
-                      </TableCell>
+                      <TableCell>{formatDate(request.submitted_at)}</TableCell>
+                      <TableCell>{getDestination(request)}</TableCell>
                       <TableCell>
                         <StatusBadge status={request.status} />
                       </TableCell>
-                      <TableCell>{formatDate(request.updatedAt)}</TableCell>
+                      <TableCell>{formatDate(request.updated_at)}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
