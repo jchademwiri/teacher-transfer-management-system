@@ -45,6 +45,7 @@ export function AppSidebar() {
   const headmasterNavItems = [
     { label: 'Dashboard', href: '/headmaster', icon: <Home className="size-4" /> },
     { label: 'Requests', href: '/headmaster/requests', icon: <File className="size-4" /> },
+    { label: 'Teachers', href: '/headmaster/teachers', icon: <Users className="size-4" /> },
     { label: 'History', href: '/headmaster/history', icon: <FileCheck className="size-4" /> },
     { label: 'Profile', href: '/profile', icon: <User className="size-4" /> },
     { label: 'Notifications', href: '/notifications', icon: <Bell className="size-4" /> },

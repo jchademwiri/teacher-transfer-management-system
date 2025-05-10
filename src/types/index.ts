@@ -58,6 +58,7 @@ export interface TransferRequest {
   headmasterActionAt?: string;
   adminActionAt?: string;
   updatedAt: string;
+  _teachers?: any; // Add this property for joined teacher data
 }
 
 export interface Notification {

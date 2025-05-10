@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -32,6 +33,7 @@ export function MainNavigation() {
     headmaster: [
       { label: 'Dashboard', href: '/headmaster', icon: <Home className="mr-2 h-4 w-4" /> },
       { label: 'Requests', href: '/headmaster/requests', icon: <File className="mr-2 h-4 w-4" /> },
+      { label: 'Teachers', href: '/headmaster/teachers', icon: <Users className="mr-2 h-4 w-4" /> },
       { label: 'History', href: '/headmaster/history', icon: <FileCheck className="mr-2 h-4 w-4" /> },
     ],
     admin: [
