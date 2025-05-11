@@ -82,10 +82,20 @@ export function useHeadmasterDashboard() {
           // Get teachers at this school
           const { data: teachersData } = await supabase
             .from('teachers')
-            .select('*')
+            .select('*, users(*)')
             .eq('school_id', schoolData.id);
             
-          setTeachers(teachersData ? teachersData.map(mapTeacher) : []);
+          // Map teacher data with user information
+          const mappedTeachers = teachersData ? teachersData.map(teacher => {
+            const userData = teacher.users || {};
+            return mapTeacher({
+              ...teacher,
+              email: userData.email || '',
+              name: userData.name || teacher.name || 'Unknown Teacher'
+            });
+          }) : [];
+          
+          setTeachers(mappedTeachers);
           
           // Get recent activity
           const { data: recentData } = await supabase

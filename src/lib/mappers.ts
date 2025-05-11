@@ -31,12 +31,12 @@ export const mapSchool = (data: any): School => ({
 
 export const mapTeacher = (data: any): Teacher => ({
   id: data.id,
-  email: "", // Fill this from User data if available
+  email: data.email || "", // Fill this from User data if available
   ecNumber: data.ec_number,
   name: data.name,
   role: "teacher",
   schoolId: data.school_id,
-  subjectIds: [], // This would need to be populated separately
+  subjectIds: data.subject_ids || [], // This would need to be populated separately
   level: data.level,
   createdAt: data.created_at,
   updatedAt: data.updated_at,
