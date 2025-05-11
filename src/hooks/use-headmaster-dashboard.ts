@@ -87,7 +87,8 @@ export function useHeadmasterDashboard() {
             
           // Map teacher data with user information
           const mappedTeachers = teachersData ? teachersData.map(teacher => {
-            const userData = teacher.users || {};
+            // Type assertion to help TypeScript understand the shape of users data
+            const userData = teacher.users as { email?: string; name?: string } || {};
             return mapTeacher({
               ...teacher,
               email: userData.email || '',
