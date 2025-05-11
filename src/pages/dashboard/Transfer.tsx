@@ -10,120 +10,253 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
-import { MOCK_SCHOOLS, MOCK_TRANSFER_REQUESTS } from '@/mock/data';
-import { TransferRequest } from '@/types';
+import { TransferRequest, School } from '@/types';
 import { useToast } from '@/hooks/use-toast';
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import * as z from "zod";
+import { supabase } from '@/integrations/supabase/client';
+import { mapTransferRequest } from '@/lib/mappers';
+
+// Form validation schema
+const transferFormSchema = z.object({
+  preferredDistrict: z.string().min(1, "Please select a preferred district"),
+  preferredSchool: z.string().optional(),
+  reason: z.string().min(10, "Reason must be at least 10 characters long"),
+});
+
+type TransferFormValues = z.infer<typeof transferFormSchema>;
 
 const TransferPage = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [activeRequest, setActiveRequest] = useState<TransferRequest | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [withdrawDialogOpen, setWithdrawDialogOpen] = useState(false);
+  const [districts, setDistricts] = useState<string[]>([]);
+  const [schools, setSchools] = useState<School[]>([]);
+  const [filteredSchools, setFilteredSchools] = useState<School[]>([]);
+  const [teacherId, setTeacherId] = useState<string | null>(null);
+  const [schoolId, setSchoolId] = useState<string | null>(null);
   
-  // Form fields
-  const [transferType, setTransferType] = useState<'school' | 'district'>('school');
-  const [selectedSchoolId, setSelectedSchoolId] = useState<string>('');
-  const [selectedDistrict, setSelectedDistrict] = useState<string>('');
-  const [reason, setReason] = useState<string>('');
+  // Initialize form
+  const form = useForm<TransferFormValues>({
+    resolver: zodResolver(transferFormSchema),
+    defaultValues: {
+      preferredDistrict: "",
+      preferredSchool: "",
+      reason: "",
+    },
+  });
   
+  const watchedDistrict = form.watch("preferredDistrict");
+  
+  // Filter schools when district changes
   useEffect(() => {
-    // Get the teacher's active transfer request
-    if (user) {
-      const request = MOCK_TRANSFER_REQUESTS.find(
-        req => req.teacherId === user.id && 
-        ['submitted', 'pending_head_approval', 'forwarded_to_admin'].includes(req.status)
-      );
-      
-      setActiveRequest(request || null);
+    if (watchedDistrict) {
+      const filtered = schools.filter(school => school.district === watchedDistrict);
+      setFilteredSchools(filtered);
+    } else {
+      setFilteredSchools([]);
     }
-  }, [user]);
-
-  const handleSubmitTransfer = (e: React.FormEvent) => {
-    e.preventDefault();
+  }, [watchedDistrict, schools]);
+  
+  // Load user data, active request, districts, and schools
+  useEffect(() => {
+    async function loadData() {
+      if (!user) return;
+      
+      try {
+        setIsLoading(true);
+        
+        // Get teacher ID and school
+        const { data: teacherData } = await supabase
+          .from('teachers')
+          .select('id, school_id')
+          .eq('user_id', user.id)
+          .single();
+          
+        if (teacherData) {
+          setTeacherId(teacherData.id);
+          setSchoolId(teacherData.school_id);
+          
+          // Get active transfer request if exists
+          const { data: requestData } = await supabase
+            .from('transfer_requests')
+            .select('*')
+            .eq('teacher_id', teacherData.id)
+            .in('status', ['pending_head_approval', 'forwarded_to_admin', 'submitted'])
+            .order('submitted_at', { ascending: false })
+            .limit(1);
+            
+          if (requestData && requestData.length > 0) {
+            setActiveRequest(mapTransferRequest(requestData[0]));
+          }
+        }
+        
+        // Get all districts
+        const { data: schoolsData } = await supabase
+          .from('schools')
+          .select('*');
+          
+        if (schoolsData) {
+          const allSchools = schoolsData.map(s => ({
+            id: s.id,
+            name: s.name,
+            district: s.district,
+            type: s.type,
+            address: s.address || '',
+            headmasterId: s.headmaster_id,
+          }));
+          
+          setSchools(allSchools);
+          
+          // Extract unique districts
+          const uniqueDistricts = Array.from(new Set(schoolsData.map(s => s.district)));
+          setDistricts(uniqueDistricts);
+        }
+      } catch (error) {
+        console.error('Error loading data:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load data. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    
+    loadData();
+  }, [user, toast]);
+  
+  const handleSubmitTransfer = async (values: TransferFormValues) => {
+    if (!teacherId || !schoolId) {
+      toast({
+        title: "Error",
+        description: "Your teacher profile is not set up correctly.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setIsSubmitting(true);
     
-    // Validate the form
-    if (transferType === 'school' && !selectedSchoolId) {
-      toast({
-        title: "Missing information",
-        description: "Please select a destination school.",
-        variant: "destructive",
-      });
-      setIsSubmitting(false);
-      return;
-    }
-    
-    if (transferType === 'district' && !selectedDistrict) {
-      toast({
-        title: "Missing information",
-        description: "Please select a destination district.",
-        variant: "destructive",
-      });
-      setIsSubmitting(false);
-      return;
-    }
-    
-    if (!reason.trim()) {
-      toast({
-        title: "Missing information",
-        description: "Please provide a reason for your transfer request.",
-        variant: "destructive",
-      });
-      setIsSubmitting(false);
-      return;
-    }
-    
-    // In a real app, this would make an API call
-    // For now, let's simulate a successful submission
-    setTimeout(() => {
-      // Create a new mock request
-      const newRequest: TransferRequest = {
-        id: `new-${Date.now()}`,
-        teacherId: user?.id || '',
-        fromSchoolId: user?.schoolId || '',
-        ...(transferType === 'school' ? { toSchoolId: selectedSchoolId } : { toDistrict: selectedDistrict }),
-        reason: reason,
+    try {
+      // Prepare the request payload
+      const requestData = {
+        teacher_id: teacherId,
+        from_school_id: schoolId,
+        to_school_id: values.preferredSchool || null,
+        to_district: values.preferredDistrict,
+        reason: values.reason,
         status: 'pending_head_approval',
-        submittedAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
       };
       
-      setActiveRequest(newRequest);
+      // Submit the request
+      const { data, error } = await supabase
+        .from('transfer_requests')
+        .insert(requestData)
+        .select()
+        .single();
       
+      if (error) throw error;
+      
+      if (data) {
+        setActiveRequest(mapTransferRequest(data));
+        
+        toast({
+          title: "Transfer request submitted",
+          description: "Your transfer request has been submitted and is pending review by your headmaster.",
+        });
+        
+        // Reset the form
+        form.reset();
+      }
+    } catch (error) {
+      console.error('Error submitting transfer request:', error);
       toast({
-        title: "Transfer request submitted",
-        description: "Your transfer request has been submitted and is pending review by your headmaster.",
+        title: "Submission failed",
+        description: "There was an error submitting your transfer request. Please try again.",
+        variant: "destructive",
       });
-      
+    } finally {
       setIsSubmitting(false);
-    }, 1500);
+    }
   };
   
-  const handleWithdrawRequest = () => {
+  const handleWithdrawRequest = async () => {
     if (!activeRequest) return;
     
     setIsSubmitting(true);
+    setWithdrawDialogOpen(false);
     
-    // In a real app, this would make an API call
-    // For now, let's simulate a successful withdrawal
-    setTimeout(() => {
+    try {
+      // Update the request status to withdrawn
+      const { error } = await supabase
+        .from('transfer_requests')
+        .update({ status: 'withdrawn_by_teacher', updated_at: new Date().toISOString() })
+        .eq('id', activeRequest.id);
+      
+      if (error) throw error;
+      
       toast({
         title: "Request withdrawn",
         description: "Your transfer request has been withdrawn successfully.",
       });
       
+      // Clear the active request
       setActiveRequest(null);
+    } catch (error) {
+      console.error('Error withdrawing request:', error);
+      toast({
+        title: "Error",
+        description: "Failed to withdraw your request. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
       setIsSubmitting(false);
-    }, 1500);
+    }
+  };
+  
+  // Helper function to format date
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString();
+  };
+  
+  // Helper function to get school name from ID
+  const getSchoolName = (id: string) => {
+    const school = schools.find(s => s.id === id);
+    return school ? school.name : 'Unknown School';
   };
 
-  if (!user) return null;
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <MainNavigation />
+        <div className="container py-6">
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold tracking-tight">Transfer Request</h1>
+            <p className="text-muted-foreground">Loading...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
-  // Get unique districts for the dropdown
-  const uniqueDistricts = Array.from(new Set(MOCK_SCHOOLS.map(school => school.district)));
-  
-  // Filter out the current school from the destination options
-  const availableSchools = MOCK_SCHOOLS.filter(school => school.id !== user.schoolId);
+  if (!user) return null;
 
   return (
     <div className="min-h-screen bg-background">
@@ -141,7 +274,7 @@ const TransferPage = () => {
                 <div>
                   <CardTitle>Active Transfer Request</CardTitle>
                   <CardDescription>
-                    Submitted on {new Date(activeRequest.submittedAt).toLocaleDateString()}
+                    Submitted on {formatDate(activeRequest.submittedAt)}
                   </CardDescription>
                 </div>
                 <StatusBadge status={activeRequest.status} />
@@ -152,17 +285,20 @@ const TransferPage = () => {
                 <div>
                   <h3 className="text-sm font-medium mb-1">From School</h3>
                   <p className="text-sm text-muted-foreground">
-                    {MOCK_SCHOOLS.find(s => s.id === activeRequest.fromSchoolId)?.name || 'Unknown School'}
+                    {activeRequest.fromSchoolId ? getSchoolName(activeRequest.fromSchoolId) : 'Unknown School'}
                   </p>
                 </div>
                 
                 <div>
-                  <h3 className="text-sm font-medium mb-1">To</h3>
+                  <h3 className="text-sm font-medium mb-1">Preferred Location</h3>
                   <p className="text-sm text-muted-foreground">
-                    {activeRequest.toSchoolId 
-                      ? MOCK_SCHOOLS.find(s => s.id === activeRequest.toSchoolId)?.name || 'Unknown School'
-                      : activeRequest.toDistrict || 'Unspecified'}
+                    <strong>District:</strong> {activeRequest.toDistrict || 'Unspecified'}
                   </p>
+                  {activeRequest.toSchoolId && (
+                    <p className="text-sm text-muted-foreground mt-1">
+                      <strong>School:</strong> {getSchoolName(activeRequest.toSchoolId)}
+                    </p>
+                  )}
                 </div>
               </div>
               
@@ -193,101 +329,138 @@ const TransferPage = () => {
                 </>
               )}
             </CardContent>
-            <CardFooter>
-              {(activeRequest.status === 'submitted' || activeRequest.status === 'pending_head_approval') && (
+            {(activeRequest.status === 'submitted' || activeRequest.status === 'pending_head_approval') && (
+              <CardFooter>
                 <Button 
                   variant="destructive" 
-                  onClick={handleWithdrawRequest}
+                  onClick={() => setWithdrawDialogOpen(true)}
                   disabled={isSubmitting}
                 >
                   {isSubmitting ? "Processing..." : "Withdraw Request"}
                 </Button>
-              )}
-            </CardFooter>
+                
+                <AlertDialog open={withdrawDialogOpen} onOpenChange={setWithdrawDialogOpen}>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Withdraw Transfer Request</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Are you sure you want to withdraw your transfer request? This action cannot be undone.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleWithdrawRequest}>
+                        Withdraw Request
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </CardFooter>
+            )}
           </Card>
         ) : (
           <Card>
             <CardHeader>
               <CardTitle>Submit New Transfer Request</CardTitle>
               <CardDescription>
-                Fill in the details to request a transfer to another school or district
+                Fill in the details to request a transfer to another district or school
               </CardDescription>
             </CardHeader>
-            <form onSubmit={handleSubmitTransfer}>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="transferType">Transfer Type</Label>
-                  <Select
-                    value={transferType}
-                    onValueChange={(value) => setTransferType(value as 'school' | 'district')}
-                  >
-                    <SelectTrigger id="transferType">
-                      <SelectValue placeholder="Select transfer type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="school">Specific School</SelectItem>
-                      <SelectItem value="district">Any School in District</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                {transferType === 'school' ? (
-                  <div className="space-y-2">
-                    <Label htmlFor="school">Destination School</Label>
-                    <Select
-                      value={selectedSchoolId}
-                      onValueChange={setSelectedSchoolId}
-                    >
-                      <SelectTrigger id="school">
-                        <SelectValue placeholder="Select a school" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {availableSchools.map(school => (
-                          <SelectItem key={school.id} value={school.id}>
-                            {school.name} ({school.district})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    <Label htmlFor="district">Destination District</Label>
-                    <Select
-                      value={selectedDistrict}
-                      onValueChange={setSelectedDistrict}
-                    >
-                      <SelectTrigger id="district">
-                        <SelectValue placeholder="Select a district" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {uniqueDistricts.map(district => (
-                          <SelectItem key={district} value={district}>
-                            {district}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-                
-                <div className="space-y-2">
-                  <Label htmlFor="reason">Reason for Transfer</Label>
-                  <Textarea
-                    id="reason"
-                    placeholder="Please explain why you are requesting a transfer"
-                    value={reason}
-                    onChange={(e) => setReason(e.target.value)}
-                    rows={5}
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(handleSubmitTransfer)}>
+                <CardContent className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="preferredDistrict"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Preferred District</FormLabel>
+                        <Select 
+                          onValueChange={field.onChange} 
+                          defaultValue={field.value}
+                          disabled={isSubmitting}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select a district" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {districts.map(district => (
+                              <SelectItem key={district} value={district}>
+                                {district}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
-                </div>
-              </CardContent>
-              <CardFooter>
-                <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting ? "Submitting..." : "Submit Transfer Request"}
-                </Button>
-              </CardFooter>
-            </form>
+                  
+                  {watchedDistrict && filteredSchools.length > 0 && (
+                    <FormField
+                      control={form.control}
+                      name="preferredSchool"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Preferred School (Optional)</FormLabel>
+                          <Select 
+                            onValueChange={field.onChange} 
+                            defaultValue={field.value}
+                            disabled={isSubmitting}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select a school (optional)" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {filteredSchools.map(school => (
+                                <SelectItem key={school.id} value={school.id}>
+                                  {school.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
+                  
+                  {watchedDistrict && filteredSchools.length === 0 && (
+                    <div className="text-sm text-muted-foreground">
+                      No schools found in this district. You can still request a transfer to the district.
+                    </div>
+                  )}
+                  
+                  <FormField
+                    control={form.control}
+                    name="reason"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Reason for Transfer</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            placeholder="Please explain why you are requesting a transfer (minimum 10 characters)"
+                            rows={5}
+                            disabled={isSubmitting}
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </CardContent>
+                <CardFooter>
+                  <Button type="submit" disabled={isSubmitting || !form.formState.isValid}>
+                    {isSubmitting ? "Submitting..." : "Submit Transfer Request"}
+                  </Button>
+                </CardFooter>
+              </form>
+            </Form>
           </Card>
         )}
       </div>
