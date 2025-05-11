@@ -33,7 +33,7 @@ export interface School {
   id: string;
   name: string;
   district: string;
-  type: "primary" | "secondary" | "combined";
+  type: string; // Changed from "primary" | "secondary" | "combined" to string to match what's coming from the database
   address: string;
   headmasterId?: string;
 }
