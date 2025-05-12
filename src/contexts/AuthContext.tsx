@@ -39,8 +39,6 @@ const MOCK_USERS: User[] = [
     schoolId: "1",
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-    isActive: true,
-    setupComplete: true,
   },
   {
     id: "2",
@@ -51,8 +49,6 @@ const MOCK_USERS: User[] = [
     schoolId: "1",
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-    isActive: true,
-    setupComplete: true,
   },
   {
     id: "3",
@@ -61,8 +57,6 @@ const MOCK_USERS: User[] = [
     role: "admin",
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-    isActive: true,
-    setupComplete: true,
   }
 ];
 

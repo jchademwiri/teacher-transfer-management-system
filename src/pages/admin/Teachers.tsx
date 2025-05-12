@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { MainNavigation } from '@/components/MainNavigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -58,40 +59,28 @@ const AdminTeachers = () => {
         `);
       
       if (subjectError) {
-        console.error('Error fetching subjects:', subjectError);
-        // Continue without subject data if there's an error
+        throw subjectError;
       }
       
       // Combine teacher, user, and subject data
       const mappedTeachers = data.map(teacher => {
         const user = users?.find(u => u.id === teacher.user_id);
         
-        // Get subjects for this teacher if available
-        let primarySubject = '';
-        let otherSubjects: string[] = [];
-        
-        if (subjectRelations) {
-          // Type assertion to avoid TS errors
-          const teacherSubjects = (subjectRelations as any[])?.filter(sr => sr.teacher_id === teacher.id) || [];
-          const primarySubjectObj = teacherSubjects.find(s => s.is_primary === true);
-          primarySubject = primarySubjectObj?.subjects?.name || '';
-          otherSubjects = teacherSubjects
-            .filter(s => !s.is_primary)
-            .map(s => s.subjects?.name)
-            .filter(Boolean);
-        }
-        
-        // Get school data
-        const schoolName = teacher.schools ? teacher.schools.name : '';
-        const district = teacher.schools ? teacher.schools.district : '';
+        // Get subjects for this teacher
+        const teacherSubjects = subjectRelations?.filter(sr => sr.teacher_id === teacher.id) || [];
+        const primarySubject = teacherSubjects.find(s => s.is_primary)?.subjects?.name || '';
+        const otherSubjects = teacherSubjects
+          .filter(s => !s.is_primary)
+          .map(s => s.subjects?.name)
+          .filter(Boolean);
         
         return {
           ...mapTeacher(teacher),
           email: user?.email || '',
           isActive: user?.is_active || false,
           setupComplete: user?.setup_complete || false,
-          schoolName,
-          district,
+          schoolName: teacher.schools?.name || '',
+          district: teacher.schools?.district || '',
           primarySubject,
           otherSubjects
         };

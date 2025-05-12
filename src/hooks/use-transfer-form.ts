@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useForm } from "react-hook-form";
@@ -86,7 +87,7 @@ export function useTransferForm() {
             id: s.id,
             name: s.name,
             district: s.district,
-            type: s.type as "primary" | "secondary" | "combined",
+            type: s.type as string,
             address: s.address || '',
             headmasterId: s.headmaster_id,
           }));
