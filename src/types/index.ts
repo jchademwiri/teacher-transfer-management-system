@@ -20,6 +20,8 @@ export interface User {
   schoolId?: string;
   createdAt: string;
   updatedAt: string;
+  isActive: boolean;
+  setupComplete: boolean;
 }
 
 export interface Teacher extends User {
@@ -27,13 +29,28 @@ export interface Teacher extends User {
   schoolId: string;
   subjectIds: string[];
   level: string; // e.g. Primary, Secondary
+  ecNumber: string;
+}
+
+export interface Headmaster extends User {
+  role: "headmaster";
+  schoolId: string;
+  ecNumber: string;
+}
+
+export interface District {
+  id: string;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface School {
   id: string;
   name: string;
   district: string;
-  type: string; // Changed from "primary" | "secondary" | "combined" to string to match what's coming from the database
+  districtId?: string;
+  type: "primary" | "secondary" | "combined";
   address: string;
   headmasterId?: string;
 }
@@ -42,6 +59,13 @@ export interface Subject {
   id: string;
   name: string;
   level: "primary" | "secondary" | "all";
+}
+
+export interface TeacherSubject {
+  id: string;
+  teacherId: string;
+  subjectId: string;
+  isPrimary: boolean;
 }
 
 export interface TransferRequest {
