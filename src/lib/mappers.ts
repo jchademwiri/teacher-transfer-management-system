@@ -1,71 +1,81 @@
 
-import { School, Subject, Teacher, TransferRequest, District, Headmaster } from "@/types";
+import { School, Subject, TransferRequest, Teacher, District } from '@/types';
 
-// Map database response to TypeScript types
-export const mapTransferRequest = (data: any): TransferRequest => ({
-  id: data.id,
-  teacherId: data.teacher_id,
-  fromSchoolId: data.from_school_id,
-  toSchoolId: data.to_school_id || undefined,
-  toDistrict: data.to_district || undefined,
-  reason: data.reason,
-  status: data.status,
-  headmasterComment: data.headmaster_comment || undefined,
-  adminComment: data.admin_comment || undefined,
-  submittedAt: data.submitted_at,
-  headmasterActionAt: data.headmaster_action_at || undefined,
-  adminActionAt: data.admin_action_at || undefined,
-  updatedAt: data.updated_at,
-  // Store joined teacher data in a separate property if it exists
-  _teachers: data.teachers || undefined, 
-});
+/**
+ * Maps a database school to our application model
+ */
+export function mapSchool(dbSchool: any): School {
+  return {
+    id: dbSchool.id,
+    name: dbSchool.name,
+    district: dbSchool.district,
+    type: dbSchool.type,
+    address: dbSchool.address || '',
+    headmasterId: dbSchool.headmaster_id
+  };
+}
 
-export const mapSchool = (data: any): School => ({
-  id: data.id,
-  name: data.name,
-  district: data.district,
-  type: data.type as string,
-  address: data.address || "",
-  headmasterId: data.headmaster_id || undefined,
-});
+/**
+ * Maps a database subject to our application model
+ */
+export function mapSubject(dbSubject: any): Subject {
+  return {
+    id: dbSubject.id,
+    name: dbSubject.name,
+    level: dbSubject.level
+  };
+}
 
-export const mapTeacher = (data: any): Teacher => ({
-  id: data.id,
-  email: data.email || "", // Fill this from User data if available
-  ecNumber: data.ec_number,
-  name: data.name,
-  role: "teacher",
-  schoolId: data.school_id,
-  subjectIds: data.subject_ids || [], // This would need to be populated separately
-  level: data.level,
-  createdAt: data.created_at,
-  updatedAt: data.updated_at,
-  isActive: data.is_active || false,
-  setupComplete: data.setup_complete || false,
-});
+/**
+ * Maps a database transfer request to our application model
+ */
+export function mapTransferRequest(dbRequest: any): TransferRequest {
+  return {
+    id: dbRequest.id,
+    teacherId: dbRequest.teacher_id,
+    fromSchoolId: dbRequest.from_school_id,
+    toSchoolId: dbRequest.to_school_id,
+    toDistrict: dbRequest.to_district,
+    reason: dbRequest.reason,
+    status: dbRequest.status,
+    headmasterComment: dbRequest.headmaster_comment,
+    adminComment: dbRequest.admin_comment,
+    submittedAt: dbRequest.submitted_at,
+    headmasterActionAt: dbRequest.headmaster_action_at,
+    adminActionAt: dbRequest.admin_action_at,
+    updatedAt: dbRequest.updated_at,
+    _teachers: dbRequest.teachers
+  };
+}
 
-export const mapSubject = (data: any): Subject => ({
-  id: data.id,
-  name: data.name,
-  level: data.level as "primary" | "secondary" | "all",
-});
+/**
+ * Maps a database teacher to our application model
+ */
+export function mapTeacher(dbTeacher: any): Teacher {
+  return {
+    id: dbTeacher.id,
+    email: dbTeacher.email || '',
+    ecNumber: dbTeacher.ec_number,
+    name: dbTeacher.name,
+    role: 'teacher',
+    schoolId: dbTeacher.school_id,
+    subjectIds: dbTeacher.subject_ids || [],
+    level: dbTeacher.level,
+    createdAt: dbTeacher.created_at,
+    updatedAt: dbTeacher.updated_at,
+    isActive: dbTeacher.is_active !== false, // Default to true if not specified
+    setupComplete: dbTeacher.setup_complete !== false // Default to true if not specified
+  };
+}
 
-export const mapDistrict = (data: any): District => ({
-  id: data.id,
-  name: data.name,
-  createdAt: data.created_at,
-  updatedAt: data.updated_at,
-});
-
-export const mapHeadmaster = (data: any): Headmaster => ({
-  id: data.id,
-  email: data.email || "", // Fill this from User data if available
-  ecNumber: data.ec_number,
-  name: data.name,
-  role: "headmaster",
-  schoolId: data.school_id,
-  createdAt: data.created_at,
-  updatedAt: data.updated_at,
-  isActive: data.is_active || false,
-  setupComplete: data.setup_complete || false,
-});
+/**
+ * Maps a database district to our application model
+ */
+export function mapDistrict(dbDistrict: any): District {
+  return {
+    id: dbDistrict.id,
+    name: dbDistrict.name,
+    createdAt: dbDistrict.created_at,
+    updatedAt: dbDistrict.updated_at
+  };
+}
