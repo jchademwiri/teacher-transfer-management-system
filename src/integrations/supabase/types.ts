@@ -9,6 +9,65 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      districts: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      headmasters: {
+        Row: {
+          created_at: string
+          ec_number: string
+          id: string
+          name: string
+          school_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          ec_number: string
+          id?: string
+          name: string
+          school_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          ec_number?: string
+          id?: string
+          name?: string
+          school_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "headmasters_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: true
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           created_at: string
@@ -44,6 +103,7 @@ export type Database = {
           address: string | null
           created_at: string
           district: string
+          district_id: string | null
           headmaster_id: string | null
           id: string
           name: string
@@ -54,6 +114,7 @@ export type Database = {
           address?: string | null
           created_at?: string
           district: string
+          district_id?: string | null
           headmaster_id?: string | null
           id?: string
           name: string
@@ -64,13 +125,22 @@ export type Database = {
           address?: string | null
           created_at?: string
           district?: string
+          district_id?: string | null
           headmaster_id?: string | null
           id?: string
           name?: string
           type?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "schools_district_id_fkey"
+            columns: ["district_id"]
+            isOneToOne: false
+            referencedRelation: "districts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       subjects: {
         Row: {
@@ -240,7 +310,9 @@ export type Database = {
           full_name: string | null
           id: string
           image: string | null
+          is_active: boolean
           name: string | null
+          setup_complete: boolean
           token_identifier: string
           updated_at: string | null
           user_id: string | null
@@ -252,7 +324,9 @@ export type Database = {
           full_name?: string | null
           id: string
           image?: string | null
+          is_active?: boolean
           name?: string | null
+          setup_complete?: boolean
           token_identifier: string
           updated_at?: string | null
           user_id?: string | null
@@ -264,7 +338,9 @@ export type Database = {
           full_name?: string | null
           id?: string
           image?: string | null
+          is_active?: boolean
           name?: string | null
+          setup_complete?: boolean
           token_identifier?: string
           updated_at?: string | null
           user_id?: string | null

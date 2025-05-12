@@ -20,6 +20,8 @@ export interface User {
   schoolId?: string;
   createdAt: string;
   updatedAt: string;
+  isActive: boolean;
+  setupComplete: boolean;
 }
 
 export interface Teacher extends User {
@@ -69,4 +71,16 @@ export interface Notification {
   read: boolean;
   type: "info" | "success" | "warning" | "error";
   createdAt: string;
+}
+
+export interface District {
+  id: string;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Headmaster extends User {
+  role: "headmaster";
+  schoolId: string;
 }

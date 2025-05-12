@@ -1,3 +1,4 @@
+
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -24,6 +25,8 @@ import AdminRequestDetail from "@/pages/admin/RequestDetail";
 import AdminTeachers from "@/pages/admin/Teachers";
 import AdminSchools from "@/pages/admin/Schools";
 import AdminSubjects from "@/pages/admin/Subjects";
+import AdminDistricts from "@/pages/admin/Districts";
+import AdminHeadmasters from "@/pages/admin/Headmasters";
 import Profile from "@/pages/Profile";
 import Notifications from "@/pages/Notifications";
 import NotFound from "@/pages/NotFound";
@@ -134,6 +137,14 @@ const App = () => {
               <Route 
                 path="/admin/schools" 
                 element={<ProtectedRoute element={<AdminSchools />} allowedRoles={['admin']} />} 
+              />
+              <Route 
+                path="/admin/districts" 
+                element={<ProtectedRoute element={<AdminDistricts />} allowedRoles={['admin']} />} 
+              />
+              <Route 
+                path="/admin/headmasters" 
+                element={<ProtectedRoute element={<AdminHeadmasters />} allowedRoles={['admin']} />} 
               />
               <Route 
                 path="/admin/subjects" 

@@ -1,5 +1,5 @@
 
-import { School, Subject, Teacher, TransferRequest } from "@/types";
+import { School, Subject, Teacher, TransferRequest, District, Headmaster } from "@/types";
 
 // Map database response to TypeScript types
 export const mapTransferRequest = (data: any): TransferRequest => ({
@@ -24,8 +24,8 @@ export const mapSchool = (data: any): School => ({
   id: data.id,
   name: data.name,
   district: data.district,
-  type: data.type as "primary" | "secondary" | "combined",
-  address: data.address || undefined,
+  type: data.type as string,
+  address: data.address || "",
   headmasterId: data.headmaster_id || undefined,
 });
 
@@ -40,10 +40,32 @@ export const mapTeacher = (data: any): Teacher => ({
   level: data.level,
   createdAt: data.created_at,
   updatedAt: data.updated_at,
+  isActive: data.is_active || false,
+  setupComplete: data.setup_complete || false,
 });
 
 export const mapSubject = (data: any): Subject => ({
   id: data.id,
   name: data.name,
   level: data.level as "primary" | "secondary" | "all",
+});
+
+export const mapDistrict = (data: any): District => ({
+  id: data.id,
+  name: data.name,
+  createdAt: data.created_at,
+  updatedAt: data.updated_at,
+});
+
+export const mapHeadmaster = (data: any): Headmaster => ({
+  id: data.id,
+  email: data.email || "", // Fill this from User data if available
+  ecNumber: data.ec_number,
+  name: data.name,
+  role: "headmaster",
+  schoolId: data.school_id,
+  createdAt: data.created_at,
+  updatedAt: data.updated_at,
+  isActive: data.is_active || false,
+  setupComplete: data.setup_complete || false,
 });

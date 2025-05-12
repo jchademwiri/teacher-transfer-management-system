@@ -11,7 +11,9 @@ import {
   Users,
   LogOut,
   Settings,
-  BookOpen
+  BookOpen,
+  Map,
+  UserCheck,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -55,7 +57,9 @@ export function AppSidebar() {
     { label: 'Dashboard', href: '/admin', icon: <Home className="size-4" /> },
     { label: 'Requests', href: '/admin/requests', icon: <File className="size-4" /> },
     { label: 'Teachers', href: '/admin/teachers', icon: <Users className="size-4" /> },
+    { label: 'Headmasters', href: '/admin/headmasters', icon: <UserCheck className="size-4" /> },
     { label: 'Schools', href: '/admin/schools', icon: <School className="size-4" /> },
+    { label: 'Districts', href: '/admin/districts', icon: <Map className="size-4" /> },
     { label: 'Subjects', href: '/admin/subjects', icon: <BookOpen className="size-4" /> },
     { label: 'Profile', href: '/profile', icon: <User className="size-4" /> },
     { label: 'Notifications', href: '/notifications', icon: <Bell className="size-4" /> },
