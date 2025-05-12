@@ -173,7 +173,7 @@ const AdminSchools = () => {
         district_id: values.district_id,
         type: values.type,
         address: values.address,
-        updated_at: new Date(),
+        updated_at: new Date().toISOString(),
       };
 
       if (currentSchool) {

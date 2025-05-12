@@ -183,7 +183,7 @@ const AdminHeadmasters = () => {
             name: values.name,
             ec_number: values.ec_number,
             school_id: values.school_id,
-            updated_at: new Date()
+            updated_at: new Date().toISOString()
           })
           .eq('id', currentHeadmaster.id);
 

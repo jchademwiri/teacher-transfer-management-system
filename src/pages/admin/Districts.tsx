@@ -99,7 +99,7 @@ const AdminDistricts = () => {
         // Update existing district
         const { error } = await supabase
           .from('districts')
-          .update({ name: values.name, updated_at: new Date() })
+          .update({ name: values.name, updated_at: new Date().toISOString() })
           .eq('id', currentDistrict.id);
 
         if (error) throw error;
