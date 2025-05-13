@@ -1,59 +1,41 @@
-import { useState, useEffect } from 'react';
+
+import React, { useState, useEffect } from 'react';
+import MainNavigation from '@/components/MainNavigation';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { District } from '@/types';
-import MainNavigation from '@/components/MainNavigation';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogFooter,
-  DialogHeader, 
-  DialogTitle 
-} from '@/components/ui/dialog';
-import { 
-  Form, 
-  FormControl, 
-  FormField, 
-  FormItem, 
-  FormLabel, 
-  FormMessage 
-} from '@/components/ui/form';
-import { useForm } from 'react-hook-form';
-import { z } from 'zod';
-import { zodResolver } from '@hookform/resolvers/zod';
+import { mapDistrict } from '@/lib/mappers';
+import { Edit, PlusCircle, Loader2, Search } from 'lucide-react';
 
-const formSchema = z.object({
-  name: z.string().min(2, {
-    message: "District name must be at least 2 characters"
-  })
+// Form schema for district
+const districtSchema = z.object({
+  name: z.string().min(3, 'District name must be at least 3 characters'),
 });
 
-type FormData = z.infer<typeof formSchema>;
+type DistrictFormValues = z.infer<typeof districtSchema>;
 
-const AdminDistricts = () => {
-  const [isLoading, setIsLoading] = useState(true);
+const DistrictsPage = () => {
   const [districts, setDistricts] = useState<District[]>([]);
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const [currentDistrict, setCurrentDistrict] = useState<District | null>(null);
   const { toast } = useToast();
 
-  const form = useForm<FormData>({
-    resolver: zodResolver(formSchema),
+  const form = useForm<DistrictFormValues>({
+    resolver: zodResolver(districtSchema),
     defaultValues: {
-      name: ""
-    }
-  });
-
-  const editForm = useForm<FormData>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      name: ""
-    }
+      name: '',
+    },
   });
 
   useEffect(() => {
@@ -61,159 +43,164 @@ const AdminDistricts = () => {
   }, []);
 
   useEffect(() => {
-    if (currentDistrict) {
-      editForm.reset({ name: currentDistrict.name });
+    // Reset form when the dialog is opened for adding a new district
+    if (!isEditing && isDialogOpen) {
+      form.reset({
+        name: '',
+      });
     }
-  }, [currentDistrict, editForm]);
+    // Set form values when editing an existing district
+    else if (isEditing && currentDistrict) {
+      form.setValue('name', currentDistrict.name);
+    }
+  }, [isDialogOpen, isEditing, currentDistrict, form]);
 
   const fetchDistricts = async () => {
+    setIsLoading(true);
     try {
-      setIsLoading(true);
       const { data, error } = await supabase
         .from('districts')
         .select('*')
         .order('name');
-      
+
       if (error) throw error;
-      
-      setDistricts(data || []);
+
+      if (data) {
+        const mappedDistricts = data.map(mapDistrict);
+        setDistricts(mappedDistricts);
+      }
     } catch (error) {
       console.error('Error fetching districts:', error);
       toast({
-        title: "Error",
-        description: "Failed to load districts",
-        variant: "destructive"
+        title: 'Error',
+        description: 'Failed to fetch districts',
+        variant: 'destructive',
       });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleAddDistrict = async (data: FormData) => {
+  const handleAddOrUpdateDistrict = async (values: DistrictFormValues) => {
     try {
-      const { error } = await supabase
-        .from('districts')
-        .insert({
-          name: data.name,
-          updated_at: new Date().toISOString()
+      if (isEditing && currentDistrict) {
+        const { error } = await supabase
+          .from('districts')
+          .update({
+            name: values.name,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', currentDistrict.id);
+
+        if (error) throw error;
+
+        toast({
+          title: 'District updated',
+          description: `${values.name} has been updated successfully.`,
         });
-      
-      if (error) throw error;
-      
-      toast({
-        title: "Success",
-        description: "District added successfully"
-      });
-      
-      setIsAddDialogOpen(false);
-      form.reset();
+      } else {
+        const { error } = await supabase
+          .from('districts')
+          .insert({
+            name: values.name,
+          });
+
+        if (error) throw error;
+
+        toast({
+          title: 'District added',
+          description: `${values.name} has been added successfully.`,
+        });
+      }
+
+      setIsDialogOpen(false);
       fetchDistricts();
-    } catch (error: any) {
-      console.error('Error adding district:', error);
+    } catch (error) {
+      console.error('Error saving district:', error);
       toast({
-        title: "Error",
-        description: error.message || "Failed to add district",
-        variant: "destructive"
+        title: 'Error',
+        description: 'Failed to save district',
+        variant: 'destructive',
       });
     }
   };
 
-  const handleEditDistrict = async (data: FormData) => {
-    if (!currentDistrict) return;
-    
-    try {
-      const { error } = await supabase
-        .from('districts')
-        .update({
-          name: data.name,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', currentDistrict.id);
-      
-      if (error) throw error;
-      
-      toast({
-        title: "Success",
-        description: "District updated successfully"
-      });
-      
-      setIsEditDialogOpen(false);
-      editForm.reset();
-      setCurrentDistrict(null);
-      fetchDistricts();
-    } catch (error: any) {
-      console.error('Error updating district:', error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to update district",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const openEditDialog = (district: District) => {
+  const handleEdit = (district: District) => {
     setCurrentDistrict(district);
-    setIsEditDialogOpen(true);
+    setIsEditing(true);
+    setIsDialogOpen(true);
   };
+
+  const filteredDistricts = districts.filter(district =>
+    district.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
     <div className="min-h-screen bg-background">
       <MainNavigation />
-      
-      <div className="container mx-auto py-8 px-4">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold">Districts Management</h1>
-          <Button onClick={() => setIsAddDialogOpen(true)}>
-            Add New District
+      <div className="container py-6">
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-3xl font-bold tracking-tight">Districts</h1>
+          <Button onClick={() => { setIsEditing(false); setIsDialogOpen(true); }}>
+            <PlusCircle className="mr-2 h-4 w-4" />
+            Add District
           </Button>
         </div>
 
-        <Card className="shadow-sm">
+        <Card className="mb-6">
           <CardHeader>
-            <CardTitle>Districts List</CardTitle>
+            <div className="flex items-center space-x-2">
+              <Search className="h-5 w-5 text-muted-foreground" />
+              <Input
+                placeholder="Search districts..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="max-w-sm"
+              />
+            </div>
           </CardHeader>
           <CardContent>
             {isLoading ? (
-              <p>Loading districts...</p>
+              <div className="flex justify-center py-6">
+                <Loader2 className="h-6 w-6 animate-spin" />
+              </div>
+            ) : filteredDistricts.length > 0 ? (
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {filteredDistricts.map((district) => (
+                  <Card key={district.id} className="overflow-hidden">
+                    <CardHeader className="p-4">
+                      <div className="flex justify-between items-center">
+                        <CardTitle className="text-lg">{district.name}</CardTitle>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleEdit(district)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </CardHeader>
+                  </Card>
+                ))}
+              </div>
             ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[200px]">Name</TableHead>
-                      <TableHead>Created At</TableHead>
-                      <TableHead>Updated At</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {districts.map((district) => (
-                      <TableRow key={district.id}>
-                        <TableCell className="font-medium">{district.name}</TableCell>
-                        <TableCell>{new Date(district.createdAt).toLocaleDateString()}</TableCell>
-                        <TableCell>{new Date(district.updatedAt).toLocaleDateString()}</TableCell>
-                        <TableCell className="text-right">
-                          <Button variant="outline" size="sm" onClick={() => openEditDialog(district)}>
-                            Edit
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+              <div className="py-6 text-center">
+                <p className="text-muted-foreground">No districts found.</p>
               </div>
             )}
           </CardContent>
         </Card>
 
-        {/* Add District Dialog */}
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogContent className="sm:max-w-md">
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogContent>
             <DialogHeader>
-              <DialogTitle>Add New District</DialogTitle>
+              <DialogTitle>{isEditing ? 'Edit District' : 'Add New District'}</DialogTitle>
+              <DialogDescription>
+                {isEditing ? 'Update the district information below.' : 'Add a new district to the system.'}
+              </DialogDescription>
             </DialogHeader>
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(handleAddDistrict)} className="space-y-4">
+              <form onSubmit={form.handleSubmit(handleAddOrUpdateDistrict)} className="space-y-6">
                 <FormField
                   control={form.control}
                   name="name"
@@ -221,44 +208,20 @@ const AdminDistricts = () => {
                     <FormItem>
                       <FormLabel>District Name</FormLabel>
                       <FormControl>
-                        <Input placeholder="District name" {...field} />
+                        <Input {...field} placeholder="Enter district name" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-                <DialogFooter>
-                  <Button type="submit">Add District</Button>
-                </DialogFooter>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
-
-        {/* Edit District Dialog */}
-        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>Edit District</DialogTitle>
-            </DialogHeader>
-            <Form {...editForm}>
-              <form onSubmit={editForm.handleSubmit(handleEditDistrict)} className="space-y-4">
-                <FormField
-                  control={editForm.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>District Name</FormLabel>
-                      <FormControl>
-                        <Input placeholder="District name" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <DialogFooter>
-                  <Button type="submit">Update District</Button>
-                </DialogFooter>
+                <div className="flex justify-end">
+                  <Button type="submit" disabled={form.formState.isSubmitting}>
+                    {form.formState.isSubmitting && (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    )}
+                    {isEditing ? 'Update District' : 'Add District'}
+                  </Button>
+                </div>
               </form>
             </Form>
           </DialogContent>
@@ -268,4 +231,4 @@ const AdminDistricts = () => {
   );
 };
 
-export default AdminDistricts;
+export default DistrictsPage;

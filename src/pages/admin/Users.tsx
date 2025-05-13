@@ -1,244 +1,203 @@
 
 import React, { useState, useEffect } from 'react';
+import MainNavigation from "@/components/MainNavigation";
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
 import { useForm } from 'react-hook-form';
-import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import MainNavigation from '@/components/MainNavigation';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Search, PlusCircle, Edit, Loader2 } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { School, Subject, UserRole } from '@/types';
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogDescription,
-  DialogFooter
-} from '@/components/ui/dialog';
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { School, Subject } from '@/types';
 import { mapSchool, mapSubject } from '@/lib/mappers';
+import { Edit, PlusCircle, Loader2, Search } from 'lucide-react';
+import { UserRole } from '@/types';
 
-// Form schema for teacher validation
-const teacherSchema = z.object({
-  name: z.string().min(3, "Full name must be at least 3 characters"),
-  email: z.string().email("Please enter a valid email address"),
-  ec_number: z.string().min(5, "EC Number must be at least 5 characters"),
-  school_id: z.string().min(1, "Please select a school"),
-  level: z.string().min(1, "Please select a level"),
-  primary_subject_id: z.string().min(1, "Please select a primary subject"),
-  other_subject_ids: z.array(z.string()).optional(),
+// Form schema for user registration
+const userSchema = z.object({
+  email: z.string().email(),
+  name: z.string().min(2),
+  password: z.string().min(6).optional(),
+  role: z.enum(['teacher', 'headmaster', 'admin']),
+  schoolId: z.string().optional(),
+  subjects: z.array(z.string()).optional(),
+  ecNumber: z.string().optional(),
 });
 
-// Form schema for headmaster validation
-const headmasterSchema = z.object({
-  name: z.string().min(3, "Full name must be at least 3 characters"),
-  email: z.string().email("Please enter a valid email address"),
-  ec_number: z.string().min(5, "EC Number must be at least 5 characters"),
-  school_id: z.string().min(1, "Please select a school"),
-});
+type UserFormValues = z.infer<typeof userSchema>;
 
-type TeacherFormValues = z.infer<typeof teacherSchema>;
-type HeadmasterFormValues = z.infer<typeof headmasterSchema>;
-
-const AdminUsers = () => {
-  const [activeTab, setActiveTab] = useState('teachers');
-  const [search, setSearch] = useState('');
+const UsersPage = () => {
   const [isLoading, setIsLoading] = useState(true);
-  const [schools, setSchools] = useState<School[]>([]);
-  const [subjects, setSubjects] = useState<Subject[]>([]);
   const [teachers, setTeachers] = useState<any[]>([]);
   const [headmasters, setHeadmasters] = useState<any[]>([]);
-  const [availableSchools, setAvailableSchools] = useState<School[]>([]);
-  
-  const [isTeacherDialogOpen, setIsTeacherDialogOpen] = useState(false);
-  const [isHeadmasterDialogOpen, setIsHeadmasterDialogOpen] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  
-  const [currentTeacher, setCurrentTeacher] = useState<any>(null);
-  const [currentHeadmaster, setCurrentHeadmaster] = useState<any>(null);
-  
+  const [adminUsers, setAdminUsers] = useState<any[]>([]);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [currentUser, setCurrentUser] = useState<any | null>(null);
+  const [userType, setUserType] = useState<'teacher' | 'headmaster'>('teacher');
+  const [schools, setSchools] = useState<School[]>([]);
+  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
   const { toast } = useToast();
-  
-  // Setup forms
-  const teacherForm = useForm<TeacherFormValues>({
-    resolver: zodResolver(teacherSchema),
+
+  // Initialize form
+  const form = useForm<UserFormValues>({
+    resolver: zodResolver(userSchema),
     defaultValues: {
-      name: '',
       email: '',
-      ec_number: '',
-      school_id: '',
-      level: '',
-      primary_subject_id: '',
-      other_subject_ids: [],
-    },
-  });
-  
-  const headmasterForm = useForm<HeadmasterFormValues>({
-    resolver: zodResolver(headmasterSchema),
-    defaultValues: {
       name: '',
-      email: '',
-      ec_number: '',
-      school_id: '',
+      password: '',
+      role: 'teacher',
+      schoolId: '',
+      subjects: [],
+      ecNumber: '',
     },
   });
 
-  // Load data
   useEffect(() => {
-    fetchData();
+    fetchUsers();
+    fetchSchoolsAndSubjects();
   }, []);
 
-  // Reset forms when dialog state changes
   useEffect(() => {
-    if (isTeacherDialogOpen && currentTeacher) {
-      teacherForm.reset({
-        name: currentTeacher.name,
-        email: currentTeacher.email,
-        ec_number: currentTeacher.ec_number,
-        school_id: currentTeacher.school_id,
-        level: currentTeacher.level,
-        primary_subject_id: currentTeacher.primary_subject_id,
-        other_subject_ids: currentTeacher.other_subject_ids || [],
+    // Reset form when dialog is opened for adding a new user
+    if (!isEditing && isDialogOpen) {
+      form.reset({
+        email: '',
+        name: '',
+        password: '',
+        role: userType,
+        schoolId: '',
+        subjects: [],
+        ecNumber: '',
       });
-    } else if (!isTeacherDialogOpen) {
-      setCurrentTeacher(null);
-      teacherForm.reset();
     }
-    
-    if (isHeadmasterDialogOpen && currentHeadmaster) {
-      headmasterForm.reset({
-        name: currentHeadmaster.name,
-        email: currentHeadmaster.email,
-        ec_number: currentHeadmaster.ec_number,
-        school_id: currentHeadmaster.school_id,
+    // Set form values when editing an existing user
+    else if (isEditing && currentUser) {
+      form.reset({
+        email: currentUser.email || '',
+        name: currentUser.name || '',
+        password: '',
+        role: currentUser.role || userType,
+        schoolId: currentUser.schoolId || '',
+        subjects: currentUser.subjects || [],
+        ecNumber: currentUser.ecNumber || '',
       });
-    } else if (!isHeadmasterDialogOpen) {
-      setCurrentHeadmaster(null);
-      headmasterForm.reset();
     }
-  }, [isTeacherDialogOpen, isHeadmasterDialogOpen, currentTeacher, currentHeadmaster]);
+  }, [isDialogOpen, isEditing, currentUser, form, userType]);
 
-  // Fetch data from API
-  const fetchData = async () => {
-    setIsLoading(true);
+  const fetchSchoolsAndSubjects = async () => {
     try {
       // Fetch schools
       const { data: schoolsData, error: schoolsError } = await supabase
         .from('schools')
         .select('*')
         .order('name');
-      
+
       if (schoolsError) throw schoolsError;
-      
+
+      if (schoolsData) {
+        const mappedSchools = schoolsData.map(mapSchool);
+        setSchools(mappedSchools);
+      }
+
       // Fetch subjects
       const { data: subjectsData, error: subjectsError } = await supabase
         .from('subjects')
         .select('*')
         .order('name');
-      
+
       if (subjectsError) throw subjectsError;
-      
-      // Fetch teachers with proper error handling
+
+      if (subjectsData) {
+        const mappedSubjects = subjectsData.map(mapSubject);
+        setSubjects(mappedSubjects);
+      }
+    } catch (error) {
+      console.error('Error fetching schools and subjects:', error);
+    }
+  };
+
+  const fetchUsers = async () => {
+    setIsLoading(true);
+    try {
+      // Fetch teachers
       const { data: teachersData, error: teachersError } = await supabase
         .from('teachers')
         .select(`
-          *,
-          schools:school_id (*),
-          users:user_id (*)
+          id,
+          name,
+          ec_number,
+          school_id,
+          user_id,
+          users!user_id(id, email, is_active, name),
+          schools!school_id(id, name, district)
         `);
-      
+
       if (teachersError) throw teachersError;
 
-      // Fetch teacher subjects separately
-      const { data: teacherSubjectsData, error: teacherSubjectsError } = await supabase
-        .from('teacher_subjects')
-        .select(`
-          teacher_id,
-          subject_id,
-          subjects:subject_id (name)
-        `);
-        
-      if (teacherSubjectsError) throw teacherSubjectsError;
+      const mappedTeachers = teachersData?.map(teacher => ({
+        id: teacher.id,
+        userId: teacher.user_id,
+        name: teacher.name || teacher.users?.name,
+        email: teacher.users?.email,
+        schoolName: teacher.schools?.name,
+        district: teacher.schools?.district,
+        ecNumber: teacher.ec_number,
+        role: 'teacher',
+        isActive: teacher.users?.is_active,
+      })) || [];
 
-      // Fetch headmasters with proper error handling
+      setTeachers(mappedTeachers);
+
+      // Fetch headmasters
       const { data: headmastersData, error: headmastersError } = await supabase
         .from('headmasters')
         .select(`
-          *,
-          schools:school_id (*),
-          users:user_id (*)
+          id,
+          name,
+          ec_number,
+          school_id,
+          user_id,
+          users!user_id(id, email, is_active, name),
+          schools!school_id(id, name, district)
         `);
-      
+
       if (headmastersError) throw headmastersError;
-      
-      // Map data safely
-      const mappedSchools = schoolsData ? schoolsData.map((school) => mapSchool(school)) : [];
-      const mappedSubjects = subjectsData ? subjectsData.map((subject) => mapSubject(subject)) : [];
-      
-      // Process teachers data with null checks and optional chaining
-      const processedTeachers = teachersData?.map(teacher => {
-        const teacherSubjects = teacherSubjectsData?.filter(ts => ts.teacher_id === teacher.id) || [];
-        const primarySubject = teacherSubjects[0]?.subjects || null;
-        const otherSubjects = teacherSubjects.slice(1).map(ts => ts?.subjects).filter(Boolean);
-        
-        return {
-          ...teacher,
-          email: teacher.users?.email || '',
-          school_name: teacher.schools?.name || 'Unknown School',
-          district: teacher.schools?.district || 'Unknown District',
-          primary_subject: primarySubject?.name || 'None',
-          other_subjects: otherSubjects.map(s => s?.name || 'Unknown').join(', '),
-        };
-      }) || [];
-      
-      // Process headmasters data with null checks and optional chaining
-      const processedHeadmasters = headmastersData?.map(headmaster => {
-        return {
-          ...headmaster,
-          email: headmaster.users?.email || '',
-          school_name: headmaster.schools?.name || 'Unknown School',
-          district: headmaster.schools?.district || 'Unknown District',
-        };
-      }) || [];
-      
-      // Find available schools for headmasters (schools without a headmaster)
-      const schoolsWithHeadmaster = headmastersData ? headmastersData.map(h => h.school_id) : [];
-      const availableForHeadmaster = mappedSchools.filter(
-        school => !schoolsWithHeadmaster.includes(school.id)
-      );
-      
-      setSchools(mappedSchools);
-      setSubjects(mappedSubjects);
-      setTeachers(processedTeachers);
-      setHeadmasters(processedHeadmasters);
-      setAvailableSchools(availableForHeadmaster);
-      
-    } catch (error: any) {
-      console.error('Error fetching data:', error);
+
+      const mappedHeadmasters = headmastersData?.map(headmaster => ({
+        id: headmaster.id,
+        userId: headmaster.user_id,
+        name: headmaster.name || headmaster.users?.name,
+        email: headmaster.users?.email,
+        schoolName: headmaster.schools?.name,
+        district: headmaster.schools?.district,
+        ecNumber: headmaster.ec_number,
+        role: 'headmaster',
+        isActive: headmaster.users?.is_active,
+      })) || [];
+
+      setHeadmasters(mappedHeadmasters);
+
+      // Fetch admin users - these are users with admin role that aren't teachers or headmasters
+      const { data: adminsData } = await supabase
+        .from('users')
+        .select('*')
+        .eq('role', 'admin');
+
+      setAdminUsers(adminsData || []);
+
+    } catch (error) {
+      console.error('Error fetching users:', error);
       toast({
         title: 'Error',
-        description: 'Failed to load data. Please try again later.',
+        description: 'Failed to fetch users',
         variant: 'destructive',
       });
     } finally {
@@ -246,301 +205,191 @@ const AdminUsers = () => {
     }
   };
 
-  // Submit handler for teacher form
-  const handleTeacherSubmit = async (values: TeacherFormValues) => {
-    setIsSubmitting(true);
+  const handleAddUser = async (values: UserFormValues) => {
     try {
-      // First, check if a user with this email exists
-      const { data: existingUser, error: userError } = await supabase
+      // Create a user account in the auth system
+      const { data: userData, error: userError } = await supabase.auth.signUp({
+        email: values.email,
+        password: values.password || 'defaultPassword123', // Set a default password if not provided
+        options: {
+          data: {
+            name: values.name,
+            role: values.role,
+          },
+        },
+      });
+
+      if (userError) throw userError;
+      
+      if (!userData.user) {
+        throw new Error('Failed to create user');
+      }
+
+      // Create a record in the users table
+      const { error: userRecordError } = await supabase
         .from('users')
-        .select('id')
-        .eq('email', values.email)
-        .single();
-      
-      let userId: string;
-      
-      if (!existingUser) {
-        // Create user with UUID
-        const newUserId = crypto.randomUUID();
-        
-        const { data: newUser, error: createError } = await supabase
-          .from('users')
-          .insert({
-            id: newUserId,
-            email: values.email,
-            name: values.name,
-            is_active: true,
-            setup_complete: true,
-            token_identifier: values.email,
-          })
-          .select('id')
-          .single();
-          
-        if (createError) throw createError;
-        userId = newUser ? newUser.id : newUserId;
-      } else {
-        userId = existingUser.id;
-      }
-      
-      let teacherId: string;
-      
-      if (currentTeacher) {
-        // Update existing teacher
-        const { error: updateError } = await supabase
-          .from('teachers')
-          .update({
-            name: values.name,
-            ec_number: values.ec_number,
-            level: values.level,
-            school_id: values.school_id,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', currentTeacher.id);
-        
-        if (updateError) throw updateError;
-        teacherId = currentTeacher.id;
-        
-        // Delete existing subject relationships
-        const { error: deleteError } = await supabase
-          .from('teacher_subjects')
-          .delete()
-          .eq('teacher_id', currentTeacher.id);
-          
-        if (deleteError) throw deleteError;
-      } else {
-        // Create new teacher
-        const newTeacherId = crypto.randomUUID();
-        
-        const { data: newTeacher, error: teacherError } = await supabase
-          .from('teachers')
-          .insert({
-            id: newTeacherId,
-            user_id: userId,
-            name: values.name,
-            ec_number: values.ec_number,
-            level: values.level,
-            school_id: values.school_id,
-          })
-          .select('id')
-          .single();
-          
-        if (teacherError) throw teacherError;
-        teacherId = newTeacher ? newTeacher.id : newTeacherId;
-      }
-      
-      // Add primary subject
-      const { error: primarySubjectError } = await supabase
-        .from('teacher_subjects')
         .insert({
-          teacher_id: teacherId,
-          subject_id: values.primary_subject_id,
+          id: userData.user.id,
+          email: values.email,
+          name: values.name,
+          is_active: true,
+          setup_complete: true,
+          token_identifier: values.email,
         });
-        
-      if (primarySubjectError) throw primarySubjectError;
-      
-      // Add other subjects
-      if (values.other_subject_ids && values.other_subject_ids.length > 0) {
-        const otherSubjectRecords = values.other_subject_ids.map(subjectId => ({
-          teacher_id: teacherId,
-          subject_id: subjectId,
-        }));
-        
-        const { error: otherSubjectsError } = await supabase
-          .from('teacher_subjects')
-          .insert(otherSubjectRecords);
-          
-        if (otherSubjectsError) throw otherSubjectsError;
+
+      if (userRecordError) throw userRecordError;
+
+      // Based on the role, create a record in the appropriate table
+      if (values.role === 'teacher') {
+        const { error: teacherError } = await supabase
+          .from('teachers')
+          .insert({
+            user_id: userData.user.id,
+            school_id: values.schoolId,
+            name: values.name,
+            ec_number: values.ecNumber,
+            level: 'primary', // Default value, can be updated later
+          });
+
+        if (teacherError) throw teacherError;
+
+        // Add subject associations if provided
+        if (values.subjects && values.subjects.length > 0) {
+          const subjectAssociations = values.subjects.map(subjectId => ({
+            teacher_id: userData.user.id,
+            subject_id: subjectId,
+          }));
+
+          const { error: subjectError } = await supabase
+            .from('teacher_subjects')
+            .insert(subjectAssociations);
+
+          if (subjectError) throw subjectError;
+        }
+
+        toast({
+          title: 'Teacher Created',
+          description: `${values.name} has been added as a teacher`,
+          variant: 'default',
+        });
+      } else if (values.role === 'headmaster') {
+        const { error: headmasterError } = await supabase
+          .from('headmasters')
+          .insert({
+            user_id: userData.user.id,
+            school_id: values.schoolId,
+            name: values.name,
+            ec_number: values.ecNumber,
+          });
+
+        if (headmasterError) throw headmasterError;
+
+        toast({
+          title: 'Headmaster Created',
+          description: `${values.name} has been added as a headmaster`,
+          variant: 'default',
+        });
       }
-      
-      toast({
-        title: 'Success',
-        description: currentTeacher ? 'Teacher updated successfully' : 'Teacher added successfully',
-      });
-      
-      setIsTeacherDialogOpen(false);
-      teacherForm.reset();
-      fetchData();
-      
-    } catch (error: any) {
-      console.error('Error submitting teacher form:', error);
+
+      setIsDialogOpen(false);
+      fetchUsers();
+    } catch (error) {
+      console.error('Error creating user:', error);
       toast({
         title: 'Error',
-        description: error.message || 'Failed to save teacher information',
+        description: 'Failed to create user. Please try again.',
         variant: 'destructive',
       });
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
-  // Submit handler for headmaster form
-  const handleHeadmasterSubmit = async (values: HeadmasterFormValues) => {
-    setIsSubmitting(true);
+  const handleUpdateUser = async (values: UserFormValues) => {
+    if (!currentUser) return;
+
     try {
-      // First, check if a user with this email exists
-      const { data: existingUser, error: userError } = await supabase
-        .from('users')
-        .select('id')
-        .eq('email', values.email)
-        .single();
-      
-      let userId: string;
-      
-      if (!existingUser) {
-        // Create user with UUID
-        const newUserId = crypto.randomUUID();
-        
-        const { data: newUser, error: createError } = await supabase
+      // Update user name and email if they've changed
+      if (currentUser.name !== values.name || currentUser.email !== values.email) {
+        const { error: userError } = await supabase
           .from('users')
-          .insert({
-            id: newUserId,
-            email: values.email,
+          .update({
             name: values.name,
-            is_active: true,
-            setup_complete: true,
-            token_identifier: values.email,
+            email: values.email,
           })
-          .select('id')
-          .single();
-          
-        if (createError) throw createError;
-        userId = newUser ? newUser.id : newUserId;
-      } else {
-        userId = existingUser.id;
+          .eq('id', currentUser.userId);
+
+        if (userError) throw userError;
       }
-      
-      // Check if the school already has a headmaster
-      if (!currentHeadmaster) {
-        const { data: existingHeadmaster, error: checkError } = await supabase
-          .from('headmasters')
-          .select('id')
-          .eq('school_id', values.school_id);
-          
-        if (existingHeadmaster && existingHeadmaster.length > 0) {
-          throw new Error('This school already has a headmaster assigned');
-        }
-      }
-      
-      let headmasterId: string;
-      
-      if (currentHeadmaster) {
-        // Update existing headmaster
-        const { error: updateError } = await supabase
+
+      let updatedUser = null;
+
+      // Update specific fields based on role
+      if (currentUser.role === 'teacher') {
+        const { data: teacherData, error: teacherError } = await supabase
+          .from('teachers')
+          .update({
+            name: values.name,
+            school_id: values.schoolId,
+          })
+          .eq('id', currentUser.id)
+          .select();
+
+        if (teacherError) throw teacherError;
+        updatedUser = teacherData ? teacherData[0] : null;
+      } else if (currentUser.role === 'headmaster') {
+        const { data: headmasterData, error: headmasterError } = await supabase
           .from('headmasters')
           .update({
             name: values.name,
-            ec_number: values.ec_number,
-            school_id: values.school_id,
-            updated_at: new Date().toISOString(),
+            school_id: values.schoolId,
           })
-          .eq('id', currentHeadmaster.id);
-        
-        if (updateError) throw updateError;
-        headmasterId = currentHeadmaster.id;
-      } else {
-        // Create new headmaster
-        const newHeadmasterId = crypto.randomUUID();
-        
-        const { data: newHeadmaster, error: headmasterError } = await supabase
-          .from('headmasters')
-          .insert({
-            id: newHeadmasterId,
-            user_id: userId,
-            name: values.name,
-            ec_number: values.ec_number,
-            school_id: values.school_id,
-          })
-          .select('id')
-          .single();
-          
+          .eq('id', currentUser.id)
+          .select();
+
         if (headmasterError) throw headmasterError;
-        headmasterId = newHeadmaster ? newHeadmaster.id : newHeadmasterId;
+        updatedUser = headmasterData ? headmasterData[0] : null;
       }
-      
-      // Update school with headmaster_id reference
-      const { error: schoolUpdateError } = await supabase
-        .from('schools')
-        .update({
-          headmaster_id: headmasterId,
-        })
-        .eq('id', values.school_id);
-        
-      if (schoolUpdateError) throw schoolUpdateError;
-      
+
       toast({
-        title: 'Success',
-        description: currentHeadmaster ? 'Headmaster updated successfully' : 'Headmaster added successfully',
+        title: 'User Updated',
+        description: `${values.name}'s information has been updated`,
+        variant: 'default',
       });
-      
-      setIsHeadmasterDialogOpen(false);
-      headmasterForm.reset();
-      fetchData();
-      
-    } catch (error: any) {
-      console.error('Error submitting headmaster form:', error);
+
+      setIsDialogOpen(false);
+      setCurrentUser(null);
+      fetchUsers();
+    } catch (error) {
+      console.error('Error updating user:', error);
       toast({
         title: 'Error',
-        description: error.message || 'Failed to save headmaster information',
+        description: 'Failed to update user information',
         variant: 'destructive',
       });
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
-  // Filter data based on search query
-  const filteredTeachers = teachers.filter(teacher =>
-    teacher.name.toLowerCase().includes(search.toLowerCase()) ||
-    teacher.email.toLowerCase().includes(search.toLowerCase()) ||
-    teacher.ec_number.toLowerCase().includes(search.toLowerCase()) ||
-    teacher.school_name.toLowerCase().includes(search.toLowerCase())
-  );
-  
-  const filteredHeadmasters = headmasters.filter(headmaster =>
-    headmaster.name.toLowerCase().includes(search.toLowerCase()) ||
-    headmaster.email.toLowerCase().includes(search.toLowerCase()) ||
-    headmaster.ec_number.toLowerCase().includes(search.toLowerCase()) ||
-    headmaster.school_name.toLowerCase().includes(search.toLowerCase())
-  );
-
-  // Open dialogs for add/edit
-  const openAddTeacherDialog = () => {
-    setCurrentTeacher(null);
-    setIsTeacherDialogOpen(true);
-  };
-  
-  const openEditTeacherDialog = (teacher: any) => {
-    setCurrentTeacher(teacher);
-    setIsTeacherDialogOpen(true);
-  };
-  
-  const openAddHeadmasterDialog = () => {
-    setCurrentHeadmaster(null);
-    setIsHeadmasterDialogOpen(true);
-  };
-  
-  const openEditHeadmasterDialog = (headmaster: any) => {
-    setCurrentHeadmaster(headmaster);
-    setIsHeadmasterDialogOpen(true);
-  };
-
-  // Toggle user active status
-  const toggleUserActive = async (userId: string, isActive: boolean, role: UserRole) => {
+  const handleToggleUserStatus = async (user: any) => {
     try {
+      const newStatus = !user.isActive;
+      
+      // Update user status in the users table
       const { error } = await supabase
         .from('users')
-        .update({ is_active: !isActive })
-        .eq('id', userId);
-        
+        .update({
+          is_active: newStatus,
+        })
+        .eq('id', user.userId);
+
       if (error) throw error;
-      
+
       toast({
-        title: 'Success',
-        description: `${role} ${isActive ? 'deactivated' : 'activated'} successfully`,
+        title: newStatus ? 'User Activated' : 'User Deactivated',
+        description: `${user.name} has been ${newStatus ? 'activated' : 'deactivated'}`,
+        variant: newStatus ? 'default' : 'destructive',
       });
-      
-      fetchData();
-    } catch (error: any) {
+
+      fetchUsers();
+    } catch (error) {
       console.error('Error toggling user status:', error);
       toast({
         title: 'Error',
@@ -550,501 +399,364 @@ const AdminUsers = () => {
     }
   };
 
+  const handleEditUser = (user: any) => {
+    setCurrentUser(user);
+    setUserType(user.role as 'teacher' | 'headmaster');
+    setIsEditing(true);
+    setIsDialogOpen(true);
+  };
+
+  const filteredTeachers = teachers.filter(teacher => 
+    teacher.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    teacher.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    teacher.ecNumber?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    teacher.schoolName?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const filteredHeadmasters = headmasters.filter(headmaster => 
+    headmaster.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    headmaster.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    headmaster.ecNumber?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    headmaster.schoolName?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
     <div className="min-h-screen bg-background">
       <MainNavigation />
-      
-      <div className="container mx-auto py-8 px-4">
-        <h1 className="text-2xl font-bold mb-6">User Management</h1>
-        
-        <Card className="shadow-sm mb-6">
-          <CardHeader>
-            <CardTitle>Search Users</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center space-x-2">
-              <div className="relative flex-grow">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  type="search"
-                  placeholder="Search by name, email, EC number, or school..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="pl-8"
-                />
-              </div>
-              <Button type="submit">Search</Button>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Tabs defaultValue="teachers" value={activeTab} onValueChange={setActiveTab}>
-          <div className="flex justify-between items-center mb-4">
-            <TabsList>
-              <TabsTrigger value="teachers">Teachers</TabsTrigger>
-              <TabsTrigger value="headmasters">Headmasters</TabsTrigger>
-            </TabsList>
-            
-            <div>
-              {activeTab === 'teachers' ? (
-                <Button onClick={openAddTeacherDialog}>
-                  <PlusCircle className="mr-2 h-4 w-4" />
-                  Add Teacher
-                </Button>
-              ) : (
-                <Button onClick={openAddHeadmasterDialog}>
-                  <PlusCircle className="mr-2 h-4 w-4" />
-                  Add Headmaster
-                </Button>
-              )}
-            </div>
+      <div className="container py-6">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold tracking-tight">Users</h1>
+          <p className="text-muted-foreground">
+            Manage teachers, headmasters, and administrators in the system
+          </p>
+        </div>
+
+        {/* User Type Selection Buttons */}
+        <div className="flex gap-4 mb-6">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setUserType('teacher')}
+            className={userType === 'teacher' ? 'border-primary' : ''}
+          >
+            <PlusCircle className="mr-2 h-4 w-4" />
+            Add Teacher
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setUserType('headmaster')}
+            className={userType === 'headmaster' ? 'border-primary' : ''}
+          >
+            <PlusCircle className="mr-2 h-4 w-4" />
+            Add Headmaster
+          </Button>
+        </div>
+
+        {/* Search Input */}
+        <div className="mb-6 flex">
+          <div className="relative w-full max-w-sm">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search users..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-8"
+            />
           </div>
-          
-          <TabsContent value="teachers">
-            {isLoading ? (
-              <div className="flex justify-center items-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse">
-                  <thead>
-                    <tr className="bg-muted border-b">
-                      <th className="text-left py-3 px-4">Name</th>
-                      <th className="text-left py-3 px-4">Email</th>
-                      <th className="text-left py-3 px-4">EC Number</th>
-                      <th className="text-left py-3 px-4">School</th>
-                      <th className="text-left py-3 px-4">Primary Subject</th>
-                      <th className="text-left py-3 px-4">Status</th>
-                      <th className="text-right py-3 px-4">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
+        </div>
+
+        {isLoading ? (
+          <div className="flex justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
+        ) : (
+          <>
+            {/* Teachers Table */}
+            <Card className="mb-8">
+              <CardHeader>
+                <CardTitle>Teachers</CardTitle>
+                <CardDescription>
+                  View and manage all teachers in the system
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>School</TableHead>
+                      <TableHead>District</TableHead>
+                      <TableHead>EC Number</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {filteredTeachers.length > 0 ? (
                       filteredTeachers.map((teacher) => (
-                        <tr key={teacher.id} className="border-b hover:bg-muted/50">
-                          <td className="py-3 px-4">{teacher.name}</td>
-                          <td className="py-3 px-4">{teacher.email}</td>
-                          <td className="py-3 px-4">{teacher.ec_number}</td>
-                          <td className="py-3 px-4">{teacher.school_name}</td>
-                          <td className="py-3 px-4">{teacher.primary_subject}</td>
-                          <td className="py-3 px-4">
-                            <Badge 
-                              variant={teacher.is_active ? "success" : "destructive"}
-                              className="cursor-pointer"
-                              onClick={() => toggleUserActive(teacher.user_id, teacher.is_active, 'teacher')}
-                            >
-                              {teacher.is_active ? 'Active' : 'Inactive'}
+                        <TableRow key={teacher.id}>
+                          <TableCell>{teacher.name}</TableCell>
+                          <TableCell>{teacher.email}</TableCell>
+                          <TableCell>{teacher.schoolName}</TableCell>
+                          <TableCell>{teacher.district}</TableCell>
+                          <TableCell>{teacher.ecNumber}</TableCell>
+                          <TableCell>
+                            <Badge variant={teacher.isActive ? "outline" : "destructive"}>
+                              {teacher.isActive ? "Active" : "Inactive"}
                             </Badge>
-                          </td>
-                          <td className="py-3 px-4 text-right">
-                            <Button 
-                              variant="ghost" 
-                              size="sm"
-                              onClick={() => openEditTeacherDialog(teacher)}
-                              className="mr-2"
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                          </td>
-                        </tr>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-2">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleEditUser(teacher)}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleToggleUserStatus(teacher)}
+                              >
+                                {teacher.isActive ? "Deactivate" : "Activate"}
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
                       ))
                     ) : (
-                      <tr>
-                        <td colSpan={7} className="text-center py-6">
-                          No teachers found matching your search criteria.
-                        </td>
-                      </tr>
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center py-4">
+                          No teachers found
+                        </TableCell>
+                      </TableRow>
                     )}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </TabsContent>
-          
-          <TabsContent value="headmasters">
-            {isLoading ? (
-              <div className="flex justify-center items-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse">
-                  <thead>
-                    <tr className="bg-muted border-b">
-                      <th className="text-left py-3 px-4">Name</th>
-                      <th className="text-left py-3 px-4">Email</th>
-                      <th className="text-left py-3 px-4">EC Number</th>
-                      <th className="text-left py-3 px-4">School</th>
-                      <th className="text-left py-3 px-4">District</th>
-                      <th className="text-left py-3 px-4">Status</th>
-                      <th className="text-right py-3 px-4">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+
+            {/* Headmasters Table */}
+            <Card className="mb-8">
+              <CardHeader>
+                <CardTitle>Headmasters</CardTitle>
+                <CardDescription>
+                  View and manage all headmasters in the system
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>School</TableHead>
+                      <TableHead>District</TableHead>
+                      <TableHead>EC Number</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {filteredHeadmasters.length > 0 ? (
                       filteredHeadmasters.map((headmaster) => (
-                        <tr key={headmaster.id} className="border-b hover:bg-muted/50">
-                          <td className="py-3 px-4">{headmaster.name}</td>
-                          <td className="py-3 px-4">{headmaster.email}</td>
-                          <td className="py-3 px-4">{headmaster.ec_number}</td>
-                          <td className="py-3 px-4">{headmaster.school_name}</td>
-                          <td className="py-3 px-4">{headmaster.district}</td>
-                          <td className="py-3 px-4">
-                            <Badge 
-                              variant={headmaster.is_active ? "success" : "destructive"}
-                              className="cursor-pointer"
-                              onClick={() => toggleUserActive(headmaster.user_id, headmaster.is_active, 'headmaster')}
-                            >
-                              {headmaster.is_active ? 'Active' : 'Inactive'}
+                        <TableRow key={headmaster.id}>
+                          <TableCell>{headmaster.name}</TableCell>
+                          <TableCell>{headmaster.email}</TableCell>
+                          <TableCell>{headmaster.schoolName}</TableCell>
+                          <TableCell>{headmaster.district}</TableCell>
+                          <TableCell>{headmaster.ecNumber}</TableCell>
+                          <TableCell>
+                            <Badge variant={headmaster.isActive ? "outline" : "destructive"}>
+                              {headmaster.isActive ? "Active" : "Inactive"}
                             </Badge>
-                          </td>
-                          <td className="py-3 px-4 text-right">
-                            <Button 
-                              variant="ghost" 
-                              size="sm"
-                              onClick={() => openEditHeadmasterDialog(headmaster)}
-                              className="mr-2"
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                          </td>
-                        </tr>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-2">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleEditUser(headmaster)}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleToggleUserStatus(headmaster)}
+                              >
+                                {headmaster.isActive ? "Deactivate" : "Activate"}
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
                       ))
                     ) : (
-                      <tr>
-                        <td colSpan={7} className="text-center py-6">
-                          No headmasters found matching your search criteria.
-                        </td>
-                      </tr>
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center py-4">
+                          No headmasters found
+                        </TableCell>
+                      </TableRow>
                     )}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </TabsContent>
-        </Tabs>
-      </div>
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
 
-      {/* Add/Edit Teacher Dialog */}
-      <Dialog open={isTeacherDialogOpen} onOpenChange={setIsTeacherDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>{currentTeacher ? 'Edit Teacher' : 'Add New Teacher'}</DialogTitle>
-            <DialogDescription>
-              {currentTeacher 
-                ? 'Update the teacher information below.' 
-                : 'Enter the details for the new teacher.'
-              }
-            </DialogDescription>
-          </DialogHeader>
-          
-          <Form {...teacherForm}>
-            <form onSubmit={teacherForm.handleSubmit(handleTeacherSubmit)} className="space-y-4">
-              <FormField
-                control={teacherForm.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Full Name</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="Full name" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={teacherForm.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email Address</FormLabel>
-                    <FormControl>
-                      <Input 
-                        {...field} 
-                        placeholder="Email address" 
-                        type="email" 
-                        disabled={currentTeacher !== null}
-                      />
-                    </FormControl>
-                    {currentTeacher && (
-                      <p className="text-xs text-muted-foreground">
-                        Email cannot be changed for existing teachers
-                      </p>
-                    )}
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={teacherForm.control}
-                name="ec_number"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>EC Number</FormLabel>
-                    <FormControl>
-                      <Input 
-                        {...field} 
-                        placeholder="EC Number" 
-                        disabled={currentTeacher !== null}
-                      />
-                    </FormControl>
-                    {currentTeacher && (
-                      <p className="text-xs text-muted-foreground">
-                        EC Number cannot be changed for existing teachers
-                      </p>
-                    )}
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={teacherForm.control}
-                name="school_id"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Assigned School</FormLabel>
-                    <Select 
-                      onValueChange={field.onChange} 
-                      defaultValue={field.value}
-                      value={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a school" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {schools.map((school) => (
-                          <SelectItem key={school.id} value={school.id}>
-                            {school.name} - {school.district}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={teacherForm.control}
-                name="level"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Teaching Level</FormLabel>
-                    <Select 
-                      onValueChange={field.onChange} 
-                      defaultValue={field.value}
-                      value={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select level" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="Primary">Primary</SelectItem>
-                        <SelectItem value="Secondary">Secondary</SelectItem>
-                        <SelectItem value="Combined">Combined</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={teacherForm.control}
-                name="primary_subject_id"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Primary Subject</FormLabel>
-                    <Select 
-                      onValueChange={field.onChange} 
-                      defaultValue={field.value}
-                      value={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select primary subject" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {subjects.map((subject) => (
-                          <SelectItem key={subject.id} value={subject.id}>
-                            {subject.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <DialogFooter>
-                <Button 
-                  variant="outline" 
-                  type="button" 
-                  onClick={() => setIsTeacherDialogOpen(false)}
-                  disabled={isSubmitting}
-                >
-                  Cancel
-                </Button>
-                <Button 
-                  type="submit" 
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  {currentTeacher ? 'Update Teacher' : 'Add Teacher'}
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
+            {/* User Dialog Form */}
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>{isEditing ? 'Edit User' : `Add New ${userType === 'teacher' ? 'Teacher' : 'Headmaster'}`}</DialogTitle>
+                  <DialogDescription>
+                    {isEditing ? 'Update user information.' : `Enter details to create a new ${userType === 'teacher' ? 'teacher' : 'headmaster'}.`}
+                  </DialogDescription>
+                </DialogHeader>
+                <Form {...form}>
+                  <form onSubmit={form.handleSubmit(isEditing ? handleUpdateUser : handleAddUser)} className="space-y-4">
+                    <FormField
+                      control={form.control}
+                      name="name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Full Name</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="Enter full name" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-      {/* Add/Edit Headmaster Dialog */}
-      <Dialog open={isHeadmasterDialogOpen} onOpenChange={setIsHeadmasterDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>{currentHeadmaster ? 'Edit Headmaster' : 'Add New Headmaster'}</DialogTitle>
-            <DialogDescription>
-              {currentHeadmaster 
-                ? 'Update the headmaster information below.' 
-                : 'Enter the details for the new headmaster.'
-              }
-            </DialogDescription>
-          </DialogHeader>
-          
-          <Form {...headmasterForm}>
-            <form onSubmit={headmasterForm.handleSubmit(handleHeadmasterSubmit)} className="space-y-4">
-              <FormField
-                control={headmasterForm.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Full Name</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="Full name" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={headmasterForm.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email Address</FormLabel>
-                    <FormControl>
-                      <Input 
-                        {...field} 
-                        placeholder="Email address" 
-                        type="email" 
-                        disabled={currentHeadmaster !== null}
-                      />
-                    </FormControl>
-                    {currentHeadmaster && (
-                      <p className="text-xs text-muted-foreground">
-                        Email cannot be changed for existing headmasters
-                      </p>
-                    )}
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={headmasterForm.control}
-                name="ec_number"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>EC Number</FormLabel>
-                    <FormControl>
-                      <Input 
-                        {...field} 
-                        placeholder="EC Number" 
-                        disabled={currentHeadmaster !== null}
-                      />
-                    </FormControl>
-                    {currentHeadmaster && (
-                      <p className="text-xs text-muted-foreground">
-                        EC Number cannot be changed for existing headmasters
-                      </p>
-                    )}
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={headmasterForm.control}
-                name="school_id"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Assigned School</FormLabel>
-                    <Select 
-                      onValueChange={field.onChange} 
-                      defaultValue={field.value}
-                      value={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a school" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {(currentHeadmaster 
-                          ? schools 
-                          : availableSchools
-                        ).map((school) => (
-                          <SelectItem key={school.id} value={school.id}>
-                            {school.name} - {school.district}
-                          </SelectItem>
-                        ))}
-                        {!currentHeadmaster && availableSchools.length === 0 && (
-                          <SelectItem value="none" disabled>
-                            No available schools (all have headmasters)
-                          </SelectItem>
+                    <FormField
+                      control={form.control}
+                      name="email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Email Address</FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              type="email"
+                              placeholder="Enter email address"
+                              disabled={isEditing} // Disable email change for existing users
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="ecNumber"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>EC Number</FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              placeholder="Enter EC number"
+                              disabled={isEditing} // EC number should not be changed once set
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="role"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>User Role</FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            defaultValue={field.value}
+                            disabled={isEditing} // Disable role change for existing users
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select a role" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="teacher">Teacher</SelectItem>
+                              <SelectItem value="headmaster">Headmaster</SelectItem>
+                              <SelectItem value="admin">Admin</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="schoolId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>School Assignment</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select a school" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {schools.map((school) => (
+                                <SelectItem key={school.id} value={school.id}>
+                                  {school.name} ({school.district})
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    {!isEditing && (
+                      <FormField
+                        control={form.control}
+                        name="password"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Password (Optional)</FormLabel>
+                            <FormControl>
+                              <Input
+                                {...field}
+                                type="password"
+                                placeholder="Leave blank for default password"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
                         )}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <DialogFooter>
-                <Button 
-                  variant="outline" 
-                  type="button" 
-                  onClick={() => setIsHeadmasterDialogOpen(false)}
-                  disabled={isSubmitting}
-                >
-                  Cancel
-                </Button>
-                <Button 
-                  type="submit" 
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  {currentHeadmaster ? 'Update Headmaster' : 'Add Headmaster'}
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
+                      />
+                    )}
+
+                    <div className="pt-4 flex justify-end">
+                      <Button type="submit" disabled={form.formState.isSubmitting}>
+                        {form.formState.isSubmitting && (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        )}
+                        {isEditing ? 'Update User' : 'Create User'}
+                      </Button>
+                    </div>
+                  </form>
+                </Form>
+              </DialogContent>
+            </Dialog>
+          </>
+        )}
+      </div>
     </div>
   );
 };
 
-export default AdminUsers;
+export default UsersPage;

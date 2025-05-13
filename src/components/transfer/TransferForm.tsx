@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { UseFormReturn } from 'react-hook-form';
 import { z } from 'zod';
@@ -16,7 +17,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { School, District } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
-import { mapDistrict, mapSchool } from '@/lib/mappers';
+import { mapSchool, mapDistrict } from '@/lib/mappers';
 import { Loader2 } from 'lucide-react';
 
 // Form schema for transfer validation
@@ -64,8 +65,10 @@ export function TransferForm({
           
           if (error) throw error;
           
-          const mappedDistricts = data.map(mapDistrict);
-          setAllDistricts(mappedDistricts);
+          if (data) {
+            const mappedDistricts = data.map(mapDistrict);
+            setAllDistricts(mappedDistricts);
+          }
         } catch (error) {
           console.error('Error fetching districts:', error);
         } finally {
@@ -105,11 +108,13 @@ export function TransferForm({
         
         if (error) throw error;
         
-        const mappedSchools = data.map(mapSchool);
-        setSchoolsByDistrict(prev => ({
-          ...prev,
-          [watchedDistrict]: mappedSchools
-        }));
+        if (data) {
+          const mappedSchools = data.map(mapSchool);
+          setSchoolsByDistrict(prev => ({
+            ...prev,
+            [watchedDistrict]: mappedSchools
+          }));
+        }
       } catch (error) {
         console.error('Error fetching schools:', error);
       } finally {
