@@ -11,7 +11,9 @@ import {
   Users,
   LogOut,
   Settings,
-  BookOpen
+  BookOpen,
+  Map,
+  UserCheck,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -26,7 +28,6 @@ import {
   SidebarGroupContent,
   SidebarGroupLabel,
 } from '@/components/ui/sidebar';
-import { cn } from '@/lib/utils';
 
 export function AppSidebar() {
   const { user, logout, role } = useAuth();
@@ -45,6 +46,7 @@ export function AppSidebar() {
   const headmasterNavItems = [
     { label: 'Dashboard', href: '/headmaster', icon: <Home className="size-4" /> },
     { label: 'Requests', href: '/headmaster/requests', icon: <File className="size-4" /> },
+    { label: 'Teachers', href: '/headmaster/teachers', icon: <Users className="size-4" /> },
     { label: 'History', href: '/headmaster/history', icon: <FileCheck className="size-4" /> },
     { label: 'Profile', href: '/profile', icon: <User className="size-4" /> },
     { label: 'Notifications', href: '/notifications', icon: <Bell className="size-4" /> },
@@ -54,7 +56,9 @@ export function AppSidebar() {
     { label: 'Dashboard', href: '/admin', icon: <Home className="size-4" /> },
     { label: 'Requests', href: '/admin/requests', icon: <File className="size-4" /> },
     { label: 'Teachers', href: '/admin/teachers', icon: <Users className="size-4" /> },
+    { label: 'Headmasters', href: '/admin/headmasters', icon: <UserCheck className="size-4" /> },
     { label: 'Schools', href: '/admin/schools', icon: <School className="size-4" /> },
+    { label: 'Districts', href: '/admin/districts', icon: <Map className="size-4" /> },
     { label: 'Subjects', href: '/admin/subjects', icon: <BookOpen className="size-4" /> },
     { label: 'Profile', href: '/profile', icon: <User className="size-4" /> },
     { label: 'Notifications', href: '/notifications', icon: <Bell className="size-4" /> },

@@ -59,6 +59,8 @@ export const MOCK_TEACHERS: Teacher[] = [
     level: "Primary",
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
+    isActive: true,
+    setupComplete: true
   },
   {
     id: "4",
@@ -71,6 +73,8 @@ export const MOCK_TEACHERS: Teacher[] = [
     level: "Primary",
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
+    isActive: true,
+    setupComplete: true
   },
   {
     id: "5",
@@ -83,6 +87,8 @@ export const MOCK_TEACHERS: Teacher[] = [
     level: "Secondary",
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
+    isActive: true,
+    setupComplete: true
   },
   {
     id: "6",
@@ -95,6 +101,8 @@ export const MOCK_TEACHERS: Teacher[] = [
     level: "Combined",
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
+    isActive: true,
+    setupComplete: true
   }
 ];
 

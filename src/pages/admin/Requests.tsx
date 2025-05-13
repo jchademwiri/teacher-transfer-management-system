@@ -1,6 +1,5 @@
-
 import { useState } from 'react';
-import { MainNavigation } from '@/components/MainNavigation';
+import MainNavigation from "@/components/MainNavigation";
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/components/StatusBadge';

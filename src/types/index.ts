@@ -20,6 +20,8 @@ export interface User {
   schoolId?: string;
   createdAt: string;
   updatedAt: string;
+  isActive: boolean;
+  setupComplete: boolean;
 }
 
 export interface Teacher extends User {
@@ -33,7 +35,7 @@ export interface School {
   id: string;
   name: string;
   district: string;
-  type: "primary" | "secondary" | "combined";
+  type: string; // Changed from "primary" | "secondary" | "combined" to string to match what's coming from the database
   address: string;
   headmasterId?: string;
 }
@@ -58,6 +60,7 @@ export interface TransferRequest {
   headmasterActionAt?: string;
   adminActionAt?: string;
   updatedAt: string;
+  _teachers?: any; // Property for joined teacher data
 }
 
 export interface Notification {
@@ -68,4 +71,16 @@ export interface Notification {
   read: boolean;
   type: "info" | "success" | "warning" | "error";
   createdAt: string;
+}
+
+export interface District {
+  id: string;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Headmaster extends User {
+  role: "headmaster";
+  schoolId: string;
 }
