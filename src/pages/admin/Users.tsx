@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import MainNavigation from '@/components/MainNavigation';
 import { Button } from '@/components/ui/button';
@@ -42,22 +41,26 @@ interface SimpleRecord {
   [key: string]: any;
 }
 
+// Define roles as a constant to avoid redundancy
+const USER_ROLES = ['admin', 'teacher', 'headmaster'] as const;
+type UserRoleType = typeof USER_ROLES[number];
+
 // Form schema for user creation/update
 const userSchema = z.object({
   name: z.string().min(3, 'Name must be at least 3 characters'),
   email: z.string().email('Invalid email address'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
-  role: z.enum(['admin', 'teacher', 'headmaster']), // Fix: Use enum instead of string with refine
+  role: z.enum(USER_ROLES),
   schoolId: z.string().optional(),
   subjectId: z.string().optional(),
 });
 
-// Define the form values type explicitly without relying on z.infer
+// Define the form values type directly
 type UserFormValues = {
   name: string;
   email: string;
   password: string;
-  role: 'admin' | 'teacher' | 'headmaster';
+  role: UserRole;
   schoolId?: string;
   subjectId?: string;
 };
@@ -73,6 +76,7 @@ const UsersPage = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const { toast } = useToast();
 
+  // Initialize form with explicit type annotation
   const form = useForm<UserFormValues>({
     resolver: zodResolver(userSchema),
     defaultValues: {
