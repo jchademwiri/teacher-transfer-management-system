@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -167,4 +168,6 @@ const MainNavigation = () => {
   );
 };
 
+// Export both as default and named export to support both import styles
+export { MainNavigation };
 export default MainNavigation;

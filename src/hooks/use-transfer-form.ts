@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useForm } from "react-hook-form";
@@ -25,13 +24,14 @@ export function useTransferForm() {
   const form = useForm<TransferFormValues>({
     resolver: zodResolver(transferFormSchema),
     defaultValues: {
-      preferredDistrict: "",
-      preferredSchool: "",
+      transferType: "district",
+      districtId: "",
+      schoolId: "",
       reason: "",
     },
   });
   
-  const watchedDistrict = form.watch("preferredDistrict");
+  const watchedDistrict = form.watch("districtId");
   
   // Filter schools when district changes
   useEffect(() => {
@@ -130,8 +130,8 @@ export function useTransferForm() {
       const requestData = {
         teacher_id: teacherId,
         from_school_id: schoolId,
-        to_school_id: values.preferredSchool || null,
-        to_district: values.preferredDistrict,
+        to_school_id: values.schoolId || null,
+        to_district: values.districtId,
         reason: values.reason,
         status: 'pending_head_approval',
       };

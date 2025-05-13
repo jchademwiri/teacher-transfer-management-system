@@ -1,6 +1,5 @@
-
-import { useState } from 'react';
-import { MainNavigation } from '@/components/MainNavigation';
+import React from 'react';
+import MainNavigation from "@/components/MainNavigation";
 import { Button } from '@/components/ui/button';
 import { Bell, Check } from 'lucide-react';
 import { Notification } from '@/types';

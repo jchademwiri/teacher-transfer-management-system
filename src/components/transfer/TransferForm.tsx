@@ -1,6 +1,6 @@
-
 import React, { useEffect, useState } from 'react';
 import { UseFormReturn } from 'react-hook-form';
+import { z } from 'zod';
 import { 
   Form,
   FormControl,
@@ -19,13 +19,23 @@ import { supabase } from '@/integrations/supabase/client';
 import { mapDistrict, mapSchool } from '@/lib/mappers';
 import { Loader2 } from 'lucide-react';
 
+// Form schema for transfer validation
+export const transferFormSchema = z.object({
+  transferType: z.enum(['school', 'district']).default('district'),
+  districtId: z.string().min(1, "Please select a district"),
+  schoolId: z.string().optional(),
+  reason: z.string().min(10, "Please provide a detailed reason for your transfer request"),
+});
+
+export type TransferFormValues = z.infer<typeof transferFormSchema>;
+
 interface TransferFormProps {
-  form: UseFormReturn<any>;
+  form: UseFormReturn<TransferFormValues>;
   isSubmitting: boolean;
-  onSubmit: (values: any) => void;
+  onSubmit: (values: TransferFormValues) => void;
   watchedDistrict: string | null;
   filteredSchools: School[];
-  districts: District[];
+  districts: string[];
 }
 
 export function TransferForm({
@@ -38,7 +48,7 @@ export function TransferForm({
 }: TransferFormProps) {
   const [loadingSchools, setLoadingSchools] = useState(false);
   const [loadingDistricts, setLoadingDistricts] = useState(false);
-  const [allDistricts, setAllDistricts] = useState<District[]>(districts);
+  const [allDistricts, setAllDistricts] = useState<District[]>([]);
   const [schoolsByDistrict, setSchoolsByDistrict] = useState<{ [key: string]: School[] }>({});
 
   // Fetch districts from database if not provided
