@@ -15,6 +15,19 @@ import { District, School } from '@/types';
 import { mapSchool, mapDistrict } from '@/lib/mappers';
 import { Edit, PlusCircle, Loader2, Search, School as SchoolIcon } from 'lucide-react';
 
+// Define headmaster data type
+type HeadmasterData = {
+  id: string;
+  name?: string;
+  email?: string;
+  ecNumber?: string;
+  schoolId?: string | null;
+  users?: {
+    name?: string;
+    email?: string;
+  } | null;
+};
+
 // Form schema for school
 const schoolSchema = z.object({
   name: z.string().min(3, 'School name must be at least 3 characters'),
@@ -25,19 +38,6 @@ const schoolSchema = z.object({
 });
 
 type SchoolFormValues = z.infer<typeof schoolSchema>;
-
-// Define a type for headmaster data to ensure TypeScript knows what properties are available
-type HeadmasterData = {
-  id: string;
-  name?: string;
-  email?: string;
-  ecNumber?: string;
-  schoolId?: string;
-  users?: {
-    name?: string;
-    email?: string;
-  } | null;
-};
 
 const SchoolsPage = () => {
   const [schools, setSchools] = useState<School[]>([]);
@@ -140,6 +140,7 @@ const SchoolsPage = () => {
     }
   };
 
+  // Update the fetchAvailableHeadmasters function
   const fetchAvailableHeadmasters = async () => {
     try {
       // Fetch headmasters who are not assigned to any school
@@ -151,13 +152,19 @@ const SchoolsPage = () => {
       if (error) throw error;
 
       // Safely map the headmaster data with proper type checks
-      const mappedHeadmasters = data?.map(headmaster => ({
-        id: headmaster.id,
-        name: headmaster.name || headmaster.users?.name || 'Unknown',
-        email: headmaster.users?.email || '',
-        ecNumber: headmaster.ec_number,
-        schoolId: headmaster.school_id,
-      })) || [];
+      const mappedHeadmasters = data?.map(headmaster => {
+        // Use optional chaining and nullish coalescing to safely access properties
+        const userName = headmaster.users?.name;
+        const userEmail = headmaster.users?.email;
+        
+        return {
+          id: headmaster.id,
+          name: headmaster.name || userName || 'Unknown',
+          email: userEmail || '',
+          ecNumber: headmaster.ec_number,
+          schoolId: headmaster.school_id,
+        };
+      }) || [];
 
       setHeadmasters(mappedHeadmasters);
     } catch (error) {
