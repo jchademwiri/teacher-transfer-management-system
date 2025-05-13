@@ -28,7 +28,6 @@ import {
   SidebarGroupContent,
   SidebarGroupLabel,
 } from '@/components/ui/sidebar';
-import { cn } from '@/lib/utils';
 
 export function AppSidebar() {
   const { user, logout, role } = useAuth();

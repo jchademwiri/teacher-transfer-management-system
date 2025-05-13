@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { UserRole } from '@/types';
 import { Toaster } from '@/components/ui/toaster';
 import { AuthProvider } from '@/contexts/AuthContext';
+import { AppLayout } from '@/components/AppLayout';
 
 // Pages
 import LoginPage from '@/pages/Login';
@@ -22,7 +23,7 @@ import AdminTeachers from '@/pages/admin/Teachers';
 import AdminRequests from '@/pages/admin/Requests';
 import AdminRequestDetail from '@/pages/admin/RequestDetail';
 import AdminSubjects from '@/pages/admin/Subjects';
-import AdminUsers from '@/pages/admin/Users'; // Add the new Users page
+import AdminUsers from '@/pages/admin/Users';
 
 // Teacher pages
 import TeacherDashboard from '@/pages/dashboard/Dashboard';
@@ -66,7 +67,7 @@ const RouteGuard: React.FC<RouteGuardProps> = ({ children, allowedRoles = [] }) 
     return <Navigate to="/" />;
   }
   
-  return <>{children}</>;
+  return <AppLayout>{children}</AppLayout>;
 };
 
 // App Component with Routes
@@ -98,13 +99,13 @@ function App() {
           </RouteGuard>
         } />
         
-        <Route path="/transfer" element={
+        <Route path="/dashboard/transfer" element={
           <RouteGuard allowedRoles={['teacher']}>
             <TransferPage />
           </RouteGuard>
         } />
         
-        <Route path="/history" element={
+        <Route path="/dashboard/history" element={
           <RouteGuard allowedRoles={['teacher']}>
             <TransferHistoryPage />
           </RouteGuard>
