@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import MainNavigation from '@/components/MainNavigation';
 import { Button } from '@/components/ui/button';
@@ -27,10 +26,23 @@ const schoolSchema = z.object({
 
 type SchoolFormValues = z.infer<typeof schoolSchema>;
 
+// Define a type for headmaster data to ensure TypeScript knows what properties are available
+type HeadmasterData = {
+  id: string;
+  name?: string;
+  email?: string;
+  ecNumber?: string;
+  schoolId?: string;
+  users?: {
+    name?: string;
+    email?: string;
+  } | null;
+};
+
 const SchoolsPage = () => {
   const [schools, setSchools] = useState<School[]>([]);
   const [districts, setDistricts] = useState<District[]>([]);
-  const [headmasters, setHeadmasters] = useState<any[]>([]);
+  const [headmasters, setHeadmasters] = useState<HeadmasterData[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -133,15 +145,15 @@ const SchoolsPage = () => {
       // Fetch headmasters who are not assigned to any school
       const { data, error } = await supabase
         .from('headmasters')
-        .select('*, users(name, email)')
+        .select('id, name, ec_number, school_id, users:user_id (name, email)')
         .order('name');
 
       if (error) throw error;
 
-      // Map the headmaster data to include user information
+      // Safely map the headmaster data with proper type checks
       const mappedHeadmasters = data?.map(headmaster => ({
         id: headmaster.id,
-        name: headmaster.users?.name || 'Unknown',
+        name: headmaster.name || headmaster.users?.name || 'Unknown',
         email: headmaster.users?.email || '',
         ecNumber: headmaster.ec_number,
         schoolId: headmaster.school_id,
@@ -150,6 +162,11 @@ const SchoolsPage = () => {
       setHeadmasters(mappedHeadmasters);
     } catch (error) {
       console.error('Error fetching headmasters:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to fetch headmasters',
+        variant: 'destructive',
+      });
     }
   };
 

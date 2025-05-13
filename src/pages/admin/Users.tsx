@@ -14,10 +14,9 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { School, Subject } from '@/types';
+import { School, Subject, UserRole } from '@/types';
 import { mapSchool, mapSubject } from '@/lib/mappers';
 import { Edit, PlusCircle, Loader2, Search } from 'lucide-react';
-import { UserRole } from '@/types';
 
 // Form schema for user registration
 const userSchema = z.object({
@@ -32,10 +31,35 @@ const userSchema = z.object({
 
 type UserFormValues = z.infer<typeof userSchema>;
 
+// Define types for teacher and headmaster data
+type TeacherData = {
+  id: string;
+  userId: string;
+  name: string;
+  email: string;
+  schoolName: string;
+  district: string;
+  ecNumber: string;
+  role: 'teacher';
+  isActive: boolean;
+};
+
+type HeadmasterData = {
+  id: string;
+  userId: string;
+  name: string;
+  email: string;
+  schoolName: string;
+  district: string;
+  ecNumber: string;
+  role: 'headmaster';
+  isActive: boolean;
+};
+
 const UsersPage = () => {
   const [isLoading, setIsLoading] = useState(true);
-  const [teachers, setTeachers] = useState<any[]>([]);
-  const [headmasters, setHeadmasters] = useState<any[]>([]);
+  const [teachers, setTeachers] = useState<TeacherData[]>([]);
+  const [headmasters, setHeadmasters] = useState<HeadmasterData[]>([]);
   const [adminUsers, setAdminUsers] = useState<any[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -127,7 +151,7 @@ const UsersPage = () => {
   const fetchUsers = async () => {
     setIsLoading(true);
     try {
-      // Fetch teachers
+      // Fetch teachers with more robust error handling and type safety
       const { data: teachersData, error: teachersError } = await supabase
         .from('teachers')
         .select(`
@@ -136,27 +160,36 @@ const UsersPage = () => {
           ec_number,
           school_id,
           user_id,
-          users!user_id(id, email, is_active, name),
-          schools!school_id(id, name, district)
+          users:user_id (id, email, is_active, name),
+          schools:school_id (id, name, district)
         `);
 
       if (teachersError) throw teachersError;
 
-      const mappedTeachers = teachersData?.map(teacher => ({
-        id: teacher.id,
-        userId: teacher.user_id,
-        name: teacher.name || teacher.users?.name,
-        email: teacher.users?.email,
-        schoolName: teacher.schools?.name,
-        district: teacher.schools?.district,
-        ecNumber: teacher.ec_number,
-        role: 'teacher',
-        isActive: teacher.users?.is_active,
-      })) || [];
+      const mappedTeachers: TeacherData[] = [];
+      
+      if (teachersData) {
+        teachersData.forEach(teacher => {
+          // Only add teachers where we can safely access all needed properties
+          if (teacher && teacher.users && teacher.schools) {
+            mappedTeachers.push({
+              id: teacher.id,
+              userId: teacher.user_id,
+              name: teacher.name || teacher.users.name || 'Unknown',
+              email: teacher.users.email || 'No email',
+              schoolName: teacher.schools.name || 'No school',
+              district: teacher.schools.district || 'No district',
+              ecNumber: teacher.ec_number || 'No EC Number',
+              role: 'teacher',
+              isActive: teacher.users.is_active || false,
+            });
+          }
+        });
+      }
 
       setTeachers(mappedTeachers);
 
-      // Fetch headmasters
+      // Fetch headmasters with similar robust handling
       const { data: headmastersData, error: headmastersError } = await supabase
         .from('headmasters')
         .select(`
@@ -165,23 +198,32 @@ const UsersPage = () => {
           ec_number,
           school_id,
           user_id,
-          users!user_id(id, email, is_active, name),
-          schools!school_id(id, name, district)
+          users:user_id (id, email, is_active, name),
+          schools:school_id (id, name, district)
         `);
 
       if (headmastersError) throw headmastersError;
 
-      const mappedHeadmasters = headmastersData?.map(headmaster => ({
-        id: headmaster.id,
-        userId: headmaster.user_id,
-        name: headmaster.name || headmaster.users?.name,
-        email: headmaster.users?.email,
-        schoolName: headmaster.schools?.name,
-        district: headmaster.schools?.district,
-        ecNumber: headmaster.ec_number,
-        role: 'headmaster',
-        isActive: headmaster.users?.is_active,
-      })) || [];
+      const mappedHeadmasters: HeadmasterData[] = [];
+      
+      if (headmastersData) {
+        headmastersData.forEach(headmaster => {
+          // Only add headmasters where we can safely access all needed properties
+          if (headmaster && headmaster.users && headmaster.schools) {
+            mappedHeadmasters.push({
+              id: headmaster.id,
+              userId: headmaster.user_id,
+              name: headmaster.name || headmaster.users.name || 'Unknown',
+              email: headmaster.users.email || 'No email',
+              schoolName: headmaster.schools.name || 'No school',
+              district: headmaster.schools.district || 'No district',
+              ecNumber: headmaster.ec_number || 'No EC Number',
+              role: 'headmaster',
+              isActive: headmaster.users.is_active || false,
+            });
+          }
+        });
+      }
 
       setHeadmasters(mappedHeadmasters);
 
