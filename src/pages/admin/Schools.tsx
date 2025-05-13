@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import MainNavigation from '@/components/MainNavigation';
 import { Button } from '@/components/ui/button';
@@ -166,20 +165,26 @@ const SchoolsPage = () => {
       // Safely map the headmaster data with proper type checks
       if (data) {
         const headmastersWithUserInfo = await Promise.all(
-          data.map(async (headmaster: HeadmasterRecord) => {
+          data.map(async (headmaster: any) => {
             // Fetch user details separately for each headmaster
-            const { data: userData, error: userError } = await supabase
-              .from('users')
-              .select('name, email')
-              .eq('id', headmaster.user_id)
-              .single();
+            let userData = null;
             
-            if (userError) {
-              console.error('Error fetching user for headmaster:', userError);
+            if (headmaster.user_id) {
+              const { data: userResult, error: userError } = await supabase
+                .from('users')
+                .select('name, email')
+                .eq('id', headmaster.user_id)
+                .single();
+              
+              if (userError) {
+                console.error('Error fetching user for headmaster:', userError);
+              } else {
+                userData = userResult;
+              }
             }
             
             // Use headmaster name as fallback or user name if available
-            const name = headmaster.name || userData?.name || 'Unknown';
+            const name = headmaster.name || (userData?.name || 'Unknown');
             const email = userData?.email || '';
             
             return {
@@ -446,7 +451,7 @@ const SchoolsPage = () => {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="">None</SelectItem>
+                          <SelectItem value="none">None</SelectItem>
                           {headmasters
                             .filter(h => !h.schoolId || (currentSchool && h.schoolId === currentSchool.id))
                             .map((headmaster) => (
