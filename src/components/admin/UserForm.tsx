@@ -66,8 +66,9 @@ export function UserForm({
         email: currentUser.email,
         password: '', // Do not populate password for security reasons
         role: currentUser.role,
-        schoolId: currentUser.school?.id || '',
-        subjectId: currentUser.subject?.id || '',
+        schoolId: currentUser.schoolId || '',
+        // SubjectId is not part of the User type, so we can't set it from currentUser
+        subjectId: '',
       });
     }
   }, [isEditing, currentUser, form]);

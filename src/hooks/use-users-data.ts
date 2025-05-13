@@ -5,10 +5,26 @@ import { supabase } from '@/integrations/supabase/client';
 import { User, School, Subject } from '@/types';
 import { mapSchool, mapSubject } from '@/lib/mappers';
 
-type SimpleRecord = {
+interface SimpleUserRecord {
   id: string;
-  [key: string]: any;
-};
+  email?: string;
+  name?: string;
+  role?: string;
+  is_active?: boolean;
+  schoolId?: string;
+  school_id?: string;
+  schools?: {
+    id?: string;
+    name?: string;
+    district?: string;
+  };
+  users?: {
+    id?: string;
+    email?: string;
+    name?: string;
+    is_active?: boolean;
+  };
+}
 
 export function useUsersData() {
   const [users, setUsers] = useState<User[]>([]);
@@ -57,7 +73,7 @@ export function useUsersData() {
       }
 
       // Map and combine the user data safely
-      const teachers = (teachersData || []).map((teacher: SimpleRecord) => {
+      const teachers = (teachersData || []).map((teacher: SimpleUserRecord) => {
         const userData = teacher.users || {};
         const schoolData = teacher.schools || {};
         
@@ -66,16 +82,15 @@ export function useUsersData() {
           email: userData.email || '',
           name: userData.name || 'Unknown Teacher',
           role: 'teacher' as const,
-          is_active: !!userData.is_active,
-          school: schoolData.id ? {
-            id: schoolData.id,
-            name: schoolData.name || 'Unknown School',
-            district: schoolData.district || 'Unknown District'
-          } : null
+          isActive: !!userData.is_active,
+          schoolId: schoolData.id,
+          createdAt: '',  // Add missing required properties
+          updatedAt: '',
+          setupComplete: false
         };
       });
 
-      const headmasters = (headmastersData || []).map((headmaster: SimpleRecord) => {
+      const headmasters = (headmastersData || []).map((headmaster: SimpleUserRecord) => {
         const userData = headmaster.users || {};
         const schoolData = headmaster.schools || {};
         
@@ -84,21 +99,23 @@ export function useUsersData() {
           email: userData.email || '',
           name: userData.name || 'Unknown Headmaster',
           role: 'headmaster' as const,
-          is_active: !!userData.is_active,
-          school: schoolData.id ? {
-            id: schoolData.id,
-            name: schoolData.name || 'Unknown School',
-            district: schoolData.district || 'Unknown District'
-          } : null
+          isActive: !!userData.is_active,
+          schoolId: schoolData.id,
+          createdAt: '',  // Add missing required properties
+          updatedAt: '',
+          setupComplete: false
         };
       });
 
-      const admins = (adminsData || []).map((admin: SimpleRecord) => ({
+      const admins = (adminsData || []).map((admin: SimpleUserRecord) => ({
         id: admin.id || '',
         email: admin.email || '',
         name: admin.name || 'Admin User',
         role: 'admin' as const,
-        is_active: !!admin.is_active
+        isActive: !!admin.is_active,
+        createdAt: '',  // Add missing required properties
+        updatedAt: '',
+        setupComplete: false
       }));
 
       // Combine all user types

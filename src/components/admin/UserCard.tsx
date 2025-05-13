@@ -12,6 +12,11 @@ interface UserCardProps {
 }
 
 export function UserCard({ user, onEdit }: UserCardProps) {
+  // Find the user's school name if schoolId exists
+  const schoolInfo = user.schoolId ? (
+    <p className="text-sm text-muted-foreground">School ID: {user.schoolId}</p>
+  ) : null;
+
   return (
     <Card className="overflow-hidden">
       <CardHeader className="p-4">
@@ -32,9 +37,7 @@ export function UserCard({ user, onEdit }: UserCardProps) {
             <Badge variant="secondary">{user.role}</Badge>
           </div>
           <p className="text-sm text-muted-foreground">{user.email}</p>
-          {user.school && (
-            <p className="text-sm text-muted-foreground">School: {user.school.name}</p>
-          )}
+          {schoolInfo}
         </div>
       </CardContent>
     </Card>
