@@ -47,14 +47,20 @@ const userSchema = z.object({
   name: z.string().min(3, 'Name must be at least 3 characters'),
   email: z.string().email('Invalid email address'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
-  role: z.string().refine(value => ['admin', 'teacher', 'headmaster'].includes(value), {
-    message: 'Invalid role selected',
-  }),
+  role: z.enum(['admin', 'teacher', 'headmaster']), // Fix: Use enum instead of string with refine
   schoolId: z.string().optional(),
   subjectId: z.string().optional(),
 });
 
-type UserFormValues = z.infer<typeof userSchema>;
+// Define the form values type explicitly without relying on z.infer
+type UserFormValues = {
+  name: string;
+  email: string;
+  password: string;
+  role: 'admin' | 'teacher' | 'headmaster';
+  schoolId?: string;
+  subjectId?: string;
+};
 
 const UsersPage = () => {
   const [users, setUsers] = useState<User[]>([]);
@@ -437,14 +443,13 @@ const UsersPage = () => {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>School (Optional)</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} defaultValue={field.value || undefined}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select school" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="none">None</SelectItem>
                           {schools.map((school) => (
                             <SelectItem key={school.id} value={school.id}>
                               {school.name}
@@ -462,14 +467,13 @@ const UsersPage = () => {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Subject (Optional)</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} defaultValue={field.value || undefined}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select subject" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="none">None</SelectItem>
                           {subjects.map((subject) => (
                             <SelectItem key={subject.id} value={subject.id}>
                               {subject.name}
