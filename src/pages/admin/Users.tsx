@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -9,6 +10,34 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Search, PlusCircle, Edit, Loader2 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { School, Subject, UserRole } from '@/types';
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogDescription,
+  DialogFooter
+} from '@/components/ui/dialog';
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { mapSchool, mapSubject } from '@/lib/mappers';
 
 // Form schema for teacher validation
 const teacherSchema = z.object({
@@ -51,6 +80,7 @@ const AdminUsers = () => {
   
   const { toast } = useToast();
   
+  // Setup forms
   const teacherForm = useForm<TeacherFormValues>({
     resolver: zodResolver(teacherSchema),
     defaultValues: {
@@ -162,15 +192,15 @@ const AdminUsers = () => {
       
       if (headmastersError) throw headmastersError;
       
-      // Map data
-      const mappedSchools = schoolsData.map(mapSchool);
-      const mappedSubjects = subjectsData.map(mapSubject);
+      // Map data safely
+      const mappedSchools = schoolsData ? schoolsData.map((school) => mapSchool(school)) : [];
+      const mappedSubjects = subjectsData ? subjectsData.map((subject) => mapSubject(subject)) : [];
       
-      // Process teachers data with null checks
+      // Process teachers data with null checks and optional chaining
       const processedTeachers = teachersData?.map(teacher => {
         const teacherSubjects = teacherSubjectsData?.filter(ts => ts.teacher_id === teacher.id) || [];
         const primarySubject = teacherSubjects[0]?.subjects || null;
-        const otherSubjects = teacherSubjects.slice(1).map(ts => ts.subjects).filter(Boolean);
+        const otherSubjects = teacherSubjects.slice(1).map(ts => ts?.subjects).filter(Boolean);
         
         return {
           ...teacher,
@@ -182,7 +212,7 @@ const AdminUsers = () => {
         };
       }) || [];
       
-      // Process headmasters data with null checks
+      // Process headmasters data with null checks and optional chaining
       const processedHeadmasters = headmastersData?.map(headmaster => {
         return {
           ...headmaster,
@@ -193,7 +223,7 @@ const AdminUsers = () => {
       }) || [];
       
       // Find available schools for headmasters (schools without a headmaster)
-      const schoolsWithHeadmaster = headmastersData.map(h => h.school_id);
+      const schoolsWithHeadmaster = headmastersData ? headmastersData.map(h => h.school_id) : [];
       const availableForHeadmaster = mappedSchools.filter(
         school => !schoolsWithHeadmaster.includes(school.id)
       );
@@ -204,7 +234,7 @@ const AdminUsers = () => {
       setHeadmasters(processedHeadmasters);
       setAvailableSchools(availableForHeadmaster);
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching data:', error);
       toast({
         title: 'Error',
@@ -230,11 +260,13 @@ const AdminUsers = () => {
       let userId: string;
       
       if (!existingUser) {
-        // Create user - fix the missing id field by using gen_random_uuid()
+        // Create user with UUID
+        const newUserId = crypto.randomUUID();
+        
         const { data: newUser, error: createError } = await supabase
           .from('users')
           .insert({
-            id: crypto.randomUUID(), // Generate a UUID for the id field
+            id: newUserId,
             email: values.email,
             name: values.name,
             is_active: true,
@@ -245,7 +277,7 @@ const AdminUsers = () => {
           .single();
           
         if (createError) throw createError;
-        userId = newUser.id;
+        userId = newUser ? newUser.id : newUserId;
       } else {
         userId = existingUser.id;
       }
@@ -266,6 +298,7 @@ const AdminUsers = () => {
           .eq('id', currentTeacher.id);
         
         if (updateError) throw updateError;
+        teacherId = currentTeacher.id;
         
         // Delete existing subject relationships
         const { error: deleteError } = await supabase
@@ -275,10 +308,13 @@ const AdminUsers = () => {
           
         if (deleteError) throw deleteError;
       } else {
-        // Create new teacher - fix assignment to constant issue
+        // Create new teacher
+        const newTeacherId = crypto.randomUUID();
+        
         const { data: newTeacher, error: teacherError } = await supabase
           .from('teachers')
           .insert({
+            id: newTeacherId,
             user_id: userId,
             name: values.name,
             ec_number: values.ec_number,
@@ -289,7 +325,7 @@ const AdminUsers = () => {
           .single();
           
         if (teacherError) throw teacherError;
-        teacherId = newTeacher.id;
+        teacherId = newTeacher ? newTeacher.id : newTeacherId;
       }
       
       // Add primary subject
@@ -351,11 +387,13 @@ const AdminUsers = () => {
       let userId: string;
       
       if (!existingUser) {
-        // Create user - fix the missing id field
+        // Create user with UUID
+        const newUserId = crypto.randomUUID();
+        
         const { data: newUser, error: createError } = await supabase
           .from('users')
           .insert({
-            id: crypto.randomUUID(), // Generate a UUID for the id field
+            id: newUserId,
             email: values.email,
             name: values.name,
             is_active: true,
@@ -366,7 +404,7 @@ const AdminUsers = () => {
           .single();
           
         if (createError) throw createError;
-        userId = newUser.id;
+        userId = newUser ? newUser.id : newUserId;
       } else {
         userId = existingUser.id;
       }
@@ -383,6 +421,8 @@ const AdminUsers = () => {
         }
       }
       
+      let headmasterId: string;
+      
       if (currentHeadmaster) {
         // Update existing headmaster
         const { error: updateError } = await supabase
@@ -396,25 +436,32 @@ const AdminUsers = () => {
           .eq('id', currentHeadmaster.id);
         
         if (updateError) throw updateError;
+        headmasterId = currentHeadmaster.id;
       } else {
         // Create new headmaster
-        const { error: headmasterError } = await supabase
+        const newHeadmasterId = crypto.randomUUID();
+        
+        const { data: newHeadmaster, error: headmasterError } = await supabase
           .from('headmasters')
           .insert({
+            id: newHeadmasterId,
             user_id: userId,
             name: values.name,
             ec_number: values.ec_number,
             school_id: values.school_id,
-          });
+          })
+          .select('id')
+          .single();
           
         if (headmasterError) throw headmasterError;
+        headmasterId = newHeadmaster ? newHeadmaster.id : newHeadmasterId;
       }
       
       // Update school with headmaster_id reference
       const { error: schoolUpdateError } = await supabase
         .from('schools')
         .update({
-          headmaster_id: currentHeadmaster ? currentHeadmaster.id : null,
+          headmaster_id: headmasterId,
         })
         .eq('id', values.school_id);
         
@@ -493,7 +540,7 @@ const AdminUsers = () => {
       });
       
       fetchData();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error toggling user status:', error);
       toast({
         title: 'Error',

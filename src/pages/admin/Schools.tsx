@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -173,14 +172,21 @@ const AdminSchools = () => {
         district_id: values.district_id,
         type: values.type,
         address: values.address,
-        updated_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(), // Changed Date to toISOString()
       };
 
       if (currentSchool) {
         // Update existing school
         const { error } = await supabase
           .from('schools')
-          .update(schoolData)
+          .update({
+            name: data.name,
+            district: data.district,
+            district_id: data.district_id,  
+            type: data.type,
+            address: data.address,
+            updated_at: new Date().toISOString(), // Changed Date to toISOString()
+          })
           .eq('id', currentSchool.id);
 
         if (error) throw error;
@@ -192,7 +198,14 @@ const AdminSchools = () => {
         // Create new school
         const { error } = await supabase
           .from('schools')
-          .insert(schoolData);
+          .insert({
+            name: data.name,
+            district: data.district,
+            district_id: data.district_id,
+            type: data.type,
+            address: data.address,
+            updated_at: new Date().toISOString(), // Changed Date to toISOString()
+          });
 
         if (error) throw error;
         toast({

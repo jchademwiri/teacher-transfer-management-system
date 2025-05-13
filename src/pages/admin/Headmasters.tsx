@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -183,7 +182,7 @@ const AdminHeadmasters = () => {
             name: values.name,
             ec_number: values.ec_number,
             school_id: values.school_id,
-            updated_at: new Date().toISOString()
+            updated_at: new Date().toISOString() // Changed Date to toISOString()
           })
           .eq('id', currentHeadmaster.id);
 
