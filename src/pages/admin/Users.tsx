@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import MainNavigation from '@/components/MainNavigation';
 import { Button } from '@/components/ui/button';
@@ -33,6 +34,44 @@ interface User {
     id: string;
     name: string;
   } | null;
+}
+
+// Define database record types
+interface TeacherRecord {
+  id: string;
+  users?: {
+    id?: string;
+    email?: string;
+    name?: string;
+    is_active?: boolean;
+  } | null;
+  schools?: {
+    id?: string;
+    name?: string;
+    district?: string;
+  } | null;
+}
+
+interface HeadmasterRecord {
+  id: string;
+  users?: {
+    id?: string;
+    email?: string;
+    name?: string;
+    is_active?: boolean;
+  } | null;
+  schools?: {
+    id?: string;
+    name?: string;
+    district?: string;
+  } | null;
+}
+
+interface AdminRecord {
+  id: string;
+  email?: string;
+  name?: string;
+  is_active?: boolean;
 }
 
 // Form schema for user creation/update
@@ -110,10 +149,11 @@ const UsersPage = () => {
           id, 
           users:user_id (id, email, name, is_active), 
           schools:school_id (id, name, district)
-        `)
-        .order('id');
+        `);
 
-      if (teachersError) console.error('Error fetching teachers:', teachersError);
+      if (teachersError) {
+        console.error('Error fetching teachers:', teachersError);
+      }
 
       // Fetch headmasters with their user information
       const { data: headmastersData, error: headmastersError } = await supabase
@@ -122,10 +162,11 @@ const UsersPage = () => {
           id, 
           users:user_id (id, email, name, is_active),
           schools:school_id (id, name, district)
-        `)
-        .order('id');
+        `);
 
-      if (headmastersError) console.error('Error fetching headmasters:', headmastersError);
+      if (headmastersError) {
+        console.error('Error fetching headmasters:', headmastersError);
+      }
 
       // Fetch admins (plain users with admin role)
       const { data: adminsData, error: adminsError } = await supabase
@@ -133,52 +174,54 @@ const UsersPage = () => {
         .select('*')
         .eq('role', 'admin');
 
-      if (adminsError) console.error('Error fetching admins:', adminsError);
+      if (adminsError) {
+        console.error('Error fetching admins:', adminsError);
+      }
 
-      // Map and combine the user data
-      const teachers = teachersData?.map(teacher => {
+      // Map and combine the user data with safe null checks
+      const teachers = (teachersData || []).map((teacher: TeacherRecord) => {
         const userData = teacher.users || {};
         const schoolData = teacher.schools || {};
         
         return {
-          id: userData.id || '',
+          id: userData.id || teacher.id || '',
           email: userData.email || '',
           name: userData.name || 'Unknown Teacher',
           role: 'teacher' as UserRole,
-          is_active: userData.is_active || false,
-          school: schoolData ? {
-            id: schoolData.id || '',
+          is_active: !!userData.is_active,
+          school: schoolData.id ? {
+            id: schoolData.id,
             name: schoolData.name || 'Unknown School',
             district: schoolData.district || 'Unknown District'
           } : null
         };
-      }) || [];
+      });
 
-      const headmasters = headmastersData?.map(headmaster => {
+      const headmasters = (headmastersData || []).map((headmaster: HeadmasterRecord) => {
         const userData = headmaster.users || {};
         const schoolData = headmaster.schools || {};
         
         return {
-          id: userData.id || '',
+          id: userData.id || headmaster.id || '',
           email: userData.email || '',
           name: userData.name || 'Unknown Headmaster',
           role: 'headmaster' as UserRole,
-          is_active: userData.is_active || false,
-          school: schoolData ? {
-            id: schoolData.id || '',
+          is_active: !!userData.is_active,
+          school: schoolData.id ? {
+            id: schoolData.id,
             name: schoolData.name || 'Unknown School',
-            district: schoolData.district || ''
+            district: schoolData.district || 'Unknown District'
           } : null
         };
-      }) || [];
+      });
 
-      const admins = adminsData?.map(admin => ({
-        id: admin.id,
-        email: admin.email,
+      const admins = (adminsData || []).map((admin: AdminRecord) => ({
+        id: admin.id || '',
+        email: admin.email || '',
         name: admin.name || 'Admin User',
         role: 'admin' as UserRole,
-        is_active: admin.is_active || false
-      })) || [];
+        is_active: !!admin.is_active
+      }));
 
       // Combine all user types
       const allUsers = [...teachers, ...headmasters, ...admins];

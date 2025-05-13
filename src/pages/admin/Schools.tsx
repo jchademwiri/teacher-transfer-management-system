@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import MainNavigation from '@/components/MainNavigation';
 import { Button } from '@/components/ui/button';
@@ -18,15 +19,26 @@ import { Edit, PlusCircle, Loader2, Search, School as SchoolIcon } from 'lucide-
 // Define headmaster data type
 type HeadmasterData = {
   id: string;
-  name?: string;
-  email?: string;
+  name: string;
+  email: string;
   ecNumber?: string;
   schoolId?: string | null;
-  users?: {
-    name?: string;
-    email?: string;
-  } | null;
 };
+
+// Define user data type
+type UserData = {
+  name?: string;
+  email?: string;
+};
+
+// Define database headmaster record type
+interface HeadmasterRecord {
+  id: string;
+  name?: string | null;
+  ec_number?: string | null;
+  school_id?: string | null;
+  users?: UserData | null;
+}
 
 // Form schema for school
 const schoolSchema = z.object({
@@ -146,27 +158,42 @@ const SchoolsPage = () => {
       // Fetch headmasters who are not assigned to any school
       const { data, error } = await supabase
         .from('headmasters')
-        .select('id, name, ec_number, school_id, users:user_id (name, email)')
+        .select('id, name, ec_number, school_id, user_id')
         .order('name');
 
       if (error) throw error;
 
       // Safely map the headmaster data with proper type checks
-      const mappedHeadmasters = data?.map(headmaster => {
-        // Use optional chaining and nullish coalescing to safely access properties
-        const userName = headmaster.users?.name;
-        const userEmail = headmaster.users?.email;
+      if (data) {
+        const headmastersWithUserInfo = await Promise.all(
+          data.map(async (headmaster: HeadmasterRecord) => {
+            // Fetch user details separately for each headmaster
+            const { data: userData, error: userError } = await supabase
+              .from('users')
+              .select('name, email')
+              .eq('id', headmaster.user_id)
+              .single();
+            
+            if (userError) {
+              console.error('Error fetching user for headmaster:', userError);
+            }
+            
+            // Use headmaster name as fallback or user name if available
+            const name = headmaster.name || userData?.name || 'Unknown';
+            const email = userData?.email || '';
+            
+            return {
+              id: headmaster.id,
+              name,
+              email,
+              ecNumber: headmaster.ec_number || '',
+              schoolId: headmaster.school_id,
+            };
+          })
+        );
         
-        return {
-          id: headmaster.id,
-          name: headmaster.name || userName || 'Unknown',
-          email: userEmail || '',
-          ecNumber: headmaster.ec_number,
-          schoolId: headmaster.school_id,
-        };
-      }) || [];
-
-      setHeadmasters(mappedHeadmasters);
+        setHeadmasters(headmastersWithUserInfo);
+      }
     } catch (error) {
       console.error('Error fetching headmasters:', error);
       toast({
