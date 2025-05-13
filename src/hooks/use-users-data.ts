@@ -5,25 +5,51 @@ import { supabase } from '@/integrations/supabase/client';
 import { User, School, Subject } from '@/types';
 import { mapSchool, mapSubject } from '@/lib/mappers';
 
-interface SimpleUserRecord {
+// Define more specific types for the database query results
+interface TeacherRecord {
   id: string;
-  email?: string;
-  name?: string;
-  role?: string;
-  is_active?: boolean;
-  schoolId?: string;
+  user_id?: string;
   school_id?: string;
-  schools?: {
-    id?: string;
-    name?: string;
-    district?: string;
-  };
+  ec_number?: string;
+  name?: string;
   users?: {
     id?: string;
     email?: string;
     name?: string;
     is_active?: boolean;
-  };
+  } | null;
+  schools?: {
+    id?: string;
+    name?: string;
+    district?: string;
+  } | null;
+}
+
+interface HeadmasterRecord {
+  id: string;
+  user_id?: string;
+  school_id?: string;
+  ec_number?: string;
+  name?: string;
+  users?: {
+    id?: string;
+    email?: string;
+    name?: string;
+    is_active?: boolean;
+  } | null;
+  schools?: {
+    id?: string;
+    name?: string;
+    district?: string;
+  } | null;
+}
+
+interface AdminRecord {
+  id: string;
+  email?: string;
+  name?: string;
+  is_active?: boolean;
+  role?: string;
 }
 
 export function useUsersData() {
@@ -72,48 +98,48 @@ export function useUsersData() {
         console.error('Error fetching admins:', adminsError);
       }
 
-      // Map and combine the user data safely
-      const teachers = (teachersData || []).map((teacher: SimpleUserRecord) => {
+      // Map and combine the user data with proper type handling
+      const teachers = (teachersData || []).map((teacher: TeacherRecord) => {
         const userData = teacher.users || {};
         const schoolData = teacher.schools || {};
         
         return {
           id: userData.id || teacher.id || '',
           email: userData.email || '',
-          name: userData.name || 'Unknown Teacher',
+          name: userData.name || teacher.name || 'Unknown Teacher',
           role: 'teacher' as const,
           isActive: !!userData.is_active,
           schoolId: schoolData.id,
-          createdAt: '',  // Add missing required properties
+          createdAt: '',
           updatedAt: '',
           setupComplete: false
         };
       });
 
-      const headmasters = (headmastersData || []).map((headmaster: SimpleUserRecord) => {
+      const headmasters = (headmastersData || []).map((headmaster: HeadmasterRecord) => {
         const userData = headmaster.users || {};
         const schoolData = headmaster.schools || {};
         
         return {
           id: userData.id || headmaster.id || '',
           email: userData.email || '',
-          name: userData.name || 'Unknown Headmaster',
+          name: userData.name || headmaster.name || 'Unknown Headmaster',
           role: 'headmaster' as const,
           isActive: !!userData.is_active,
           schoolId: schoolData.id,
-          createdAt: '',  // Add missing required properties
+          createdAt: '',
           updatedAt: '',
           setupComplete: false
         };
       });
 
-      const admins = (adminsData || []).map((admin: SimpleUserRecord) => ({
+      const admins = (adminsData || []).map((admin: AdminRecord) => ({
         id: admin.id || '',
         email: admin.email || '',
         name: admin.name || 'Admin User',
         role: 'admin' as const,
         isActive: !!admin.is_active,
-        createdAt: '',  // Add missing required properties
+        createdAt: '',
         updatedAt: '',
         setupComplete: false
       }));

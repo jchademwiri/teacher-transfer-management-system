@@ -5,7 +5,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { UserRole } from '@/types';
 import { Toaster } from '@/components/ui/toaster';
 import { AuthProvider } from '@/contexts/AuthContext';
-import { AppLayout } from '@/components/AppLayout';
 
 // Pages
 import LoginPage from '@/pages/Login';
@@ -36,6 +35,7 @@ import HeadmasterTeachers from '@/pages/headmaster/Teachers';
 import HeadmasterRequests from '@/pages/headmaster/Requests';
 import HeadmasterRequestDetail from '@/pages/headmaster/RequestDetail';
 import HeadmasterHistory from '@/pages/headmaster/History';
+import MainNavigation from '@/components/MainNavigation';
 
 // Route Guard Component
 interface RouteGuardProps {
@@ -47,7 +47,7 @@ const RouteGuard: React.FC<RouteGuardProps> = ({ children, allowedRoles = [] }) 
   const { user, isLoading, isAuthenticated } = useAuth();
   
   if (isLoading) {
-    return <div>Loading...</div>;
+    return <div className="flex justify-center items-center h-screen">Loading...</div>;
   }
   
   if (!isAuthenticated) {
@@ -67,7 +67,14 @@ const RouteGuard: React.FC<RouteGuardProps> = ({ children, allowedRoles = [] }) 
     return <Navigate to="/" />;
   }
   
-  return <AppLayout>{children}</AppLayout>;
+  return (
+    <div className="min-h-screen bg-background">
+      <MainNavigation />
+      <div className="container py-6">
+        {children}
+      </div>
+    </div>
+  );
 };
 
 // App Component with Routes
@@ -99,13 +106,13 @@ function App() {
           </RouteGuard>
         } />
         
-        <Route path="/dashboard/transfer" element={
+        <Route path="/transfer" element={
           <RouteGuard allowedRoles={['teacher']}>
             <TransferPage />
           </RouteGuard>
         } />
         
-        <Route path="/dashboard/history" element={
+        <Route path="/history" element={
           <RouteGuard allowedRoles={['teacher']}>
             <TransferHistoryPage />
           </RouteGuard>

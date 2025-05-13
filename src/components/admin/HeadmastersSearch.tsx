@@ -11,13 +11,17 @@ interface HeadmastersSearchProps {
 }
 
 export function HeadmastersSearch({ search, onSearchChange }: HeadmastersSearchProps) {
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+  };
+  
   return (
     <Card className="shadow-sm mb-6">
       <CardHeader>
         <CardTitle>Search Headmasters</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="flex items-center space-x-2">
+        <form onSubmit={handleSubmit} className="flex items-center space-x-2">
           <div className="relative flex-grow">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
@@ -29,7 +33,7 @@ export function HeadmastersSearch({ search, onSearchChange }: HeadmastersSearchP
             />
           </div>
           <Button type="submit">Search</Button>
-        </div>
+        </form>
       </CardContent>
     </Card>
   );
