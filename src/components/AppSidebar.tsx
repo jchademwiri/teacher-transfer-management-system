@@ -52,7 +52,8 @@ export function AppSidebar() {
     { label: 'Notifications', href: '/notifications', icon: <Bell className="size-4" /> },
   ];
 
-  const adminNavItems = [
+  const adminNavItes
+  ms = [
     { label: 'Dashboard', href: '/admin', icon: <Home className="size-4" /> },
     { label: 'Requests', href: '/admin/requests', icon: <File className="size-4" /> },
     { label: 'Teachers', href: '/admin/teachers', icon: <Users className="size-4" /> },
