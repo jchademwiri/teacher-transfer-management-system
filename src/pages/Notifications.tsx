@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import MainNavigation from "@/components/MainNavigation";
+// import MainNavigation from "@/components/MainNavigation";
 import { Button } from '@/components/ui/button';
 import { Bell, Check } from 'lucide-react';
 import { Notification } from '@/types';
@@ -85,7 +85,7 @@ const NotificationsPage = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <MainNavigation />
+      {/* <MainNavigation /> */}
       <div className="container py-6">
         <div className="flex items-center justify-between mb-8">
           <div>
