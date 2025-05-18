@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Search, Loader2, Edit } from 'lucide-react';
 import { Card, CardHeader, CardContent } from '@/components/ui/card';
 import { User } from '@/types';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 
 interface UsersListProps {
   users: User[];
@@ -27,6 +28,15 @@ export function UsersList({
     user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     user.email.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(part => part.charAt(0))
+      .join('')
+      .toUpperCase()
+      .substring(0, 2);
+  };
 
   return (
     <Card className="mb-6">
@@ -51,7 +61,7 @@ export function UsersList({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Name</TableHead>
+                  <TableHead>User</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Role</TableHead>
                   <TableHead>Status</TableHead>
@@ -61,7 +71,14 @@ export function UsersList({
               <TableBody>
                 {filteredUsers.map((user) => (
                   <TableRow key={user.id}>
-                    <TableCell className="font-medium">{user.name}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Avatar className="h-8 w-8">
+                          <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
+                        </Avatar>
+                        <span className="font-medium">{user.name}</span>
+                      </div>
+                    </TableCell>
                     <TableCell>{user.email}</TableCell>
                     <TableCell>
                       <Badge variant="secondary">{user.role}</Badge>
