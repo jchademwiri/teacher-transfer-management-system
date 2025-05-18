@@ -1,5 +1,5 @@
 import { useState } from "react";
-import MainNavigation from "@/components/MainNavigation";
+// import MainNavigation from "@/components/MainNavigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -45,7 +45,7 @@ const ProfilePage = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <MainNavigation />
+      {/* <MainNavigation /> */}
       <div className="container py-6">
         <div className="mb-8">
           <h1 className="text-3xl font-bold tracking-tight">Your Profile</h1>
