@@ -52,7 +52,7 @@ const HeadmasterTeachers = () => {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
-        <MainNavigation />
+        {/* <MainNavigation /> */}
         <main className="container py-6">
           <p>Loading teachers...</p>
         </main>
@@ -63,7 +63,7 @@ const HeadmasterTeachers = () => {
   if (error) {
     return (
       <div className="min-h-screen bg-background">
-        <MainNavigation />
+        {/* <MainNavigation /> */}
         <main className="container py-6">
           <p className="text-red-600">Error: {error}</p>
         </main>
@@ -73,7 +73,7 @@ const HeadmasterTeachers = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <MainNavigation />
+      {/* <MainNavigation /> */}
       <main className="container py-6">
         <div className="mb-8">
           <h1 className="text-3xl font-bold tracking-tight">School Teachers</h1>
