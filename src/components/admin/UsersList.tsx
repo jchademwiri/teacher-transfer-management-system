@@ -67,7 +67,7 @@ export function UsersList({
                       <Badge variant="secondary">{user.role}</Badge>
                     </TableCell>
                     <TableCell>
-                      <Badge variant={user.isActive ? "success" : "destructive"}>
+                      <Badge variant={user.isActive ? "secondary" : "destructive"}>
                         {user.isActive ? "Active" : "Inactive"}
                       </Badge>
                     </TableCell>
