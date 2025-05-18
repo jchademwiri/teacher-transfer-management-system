@@ -322,7 +322,7 @@ export type Database = {
           created_at?: string
           email?: string | null
           full_name?: string | null
-          id: string
+          id?: string
           image?: string | null
           is_active?: boolean
           name?: string | null

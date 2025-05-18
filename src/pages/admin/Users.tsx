@@ -10,6 +10,7 @@ import { useUsersData } from '@/hooks/use-users-data';
 import { UsersList } from '@/components/admin/UsersList';
 import { UserForm } from '@/components/admin/UserForm';
 import { UserFormValues } from '@/components/admin/UserFormSchema';
+import { supabase } from '@/integrations/supabase/client';
 
 const UsersPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -29,6 +30,21 @@ const UsersPage = () => {
   const handleAddOrUpdateUser = async (values: UserFormValues) => {
     try {
       if (isEditing && currentUser) {
+        const { error } = await supabase
+          .from('users')
+          .update({
+            name: values.name,
+            email: values.email,
+            password: values.password,
+            role: values.role,
+            // school_id: values.schoolId,
+            // subject_id: values.subjectId,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', currentUser.id);
+
+        if (error) throw error;
+
         // Update existing user
         // Implementation omitted for brevity
         toast({
@@ -36,6 +52,20 @@ const UsersPage = () => {
           description: `${values.name} has been updated successfully.`,
         });
       } else {
+        const { error } = await supabase
+          .from('users')
+          .insert({
+            email: values.email,
+            full_name: values.name,
+            role: values.role,
+            // subject_id: values.subjectId,
+            // school_id: values.schoolId,
+            token_identifier: values.email, // Using email as token identifier
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          });
+
+        if (error) throw error;
         // Create new user
         // Implementation omitted for brevity
         toast({
