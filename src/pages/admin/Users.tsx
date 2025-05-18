@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import MainNavigation from '@/components/MainNavigation';
+// import MainNavigation from '@/components/MainNavigation';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
@@ -64,7 +64,7 @@ const UsersPage = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <MainNavigation />
+      {/* <MainNavigation /> */}
       <div className="container py-6">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-3xl font-bold tracking-tight">Users</h1>
