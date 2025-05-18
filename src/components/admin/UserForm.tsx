@@ -69,7 +69,7 @@ export function UserForm({
       form.reset({
         name: currentUser.name,
         email: currentUser.email,
-        password: '', // Do not populate password for security reasons
+        password: 'password', // Do not populate password for security reasons
         role: currentUser.role,
         schoolId: currentUser.schoolId || '',
         subjectId: '',
