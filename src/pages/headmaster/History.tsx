@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { MainNavigation } from '@/components/MainNavigation';
+// import { MainNavigation } from '@/components/MainNavigation';
 import { Card, CardContent } from '@/components/ui/card';
 import { useDatabase } from '@/hooks/use-database';
 
@@ -28,7 +28,7 @@ const HeadmasterHistory = () => {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
-        <MainNavigation />
+        {/* <MainNavigation /> */}
         <div className="container mx-auto py-8 px-4">
           <p>Loading history...</p>
         </div>
@@ -38,7 +38,7 @@ const HeadmasterHistory = () => {
   
   return (
     <div className="min-h-screen bg-background">
-      <MainNavigation />
+      {/* <MainNavigation /> */}
       
       <div className="container mx-auto py-8 px-4">
         <div className="flex justify-between items-center mb-6">

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import MainNavigation from "@/components/MainNavigation";
+// import MainNavigation from "@/components/MainNavigation";
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -101,7 +101,7 @@ const AdminRequestDetail = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <MainNavigation />
+      {/* <MainNavigation /> */}
       
       <div className="container mx-auto py-8 px-4">
         <div className="flex justify-between items-center mb-6">

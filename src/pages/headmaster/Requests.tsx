@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { MainNavigation } from '@/components/MainNavigation';
+// import { MainNavigation } from '@/components/MainNavigation';
 import { DashboardCard } from '@/components/DashboardCard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -66,7 +66,7 @@ const HeadmasterRequests = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <MainNavigation />
+      {/* <MainNavigation /> */}
       
       <div className="container mx-auto py-8 px-4">
         <div className="flex justify-between items-center mb-6">

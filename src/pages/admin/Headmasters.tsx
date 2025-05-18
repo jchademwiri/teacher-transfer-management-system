@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import MainNavigation from "@/components/MainNavigation";
+// import MainNavigation from "@/components/MainNavigation";
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -156,7 +156,7 @@ const HeadmastersPage = () => {
   
   return (
     <div className="min-h-screen bg-background">
-      <MainNavigation />
+      {/* <MainNavigation /> */}
       <div className="container mx-auto py-8 px-4">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold">Headmasters Management</h1>

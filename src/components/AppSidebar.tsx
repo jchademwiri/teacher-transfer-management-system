@@ -52,8 +52,7 @@ export function AppSidebar() {
     { label: 'Notifications', href: '/notifications', icon: <Bell className="size-4" /> },
   ];
 
-  const adminNavItes
-  ms = [
+  const adminNavItems = [
     { label: 'Dashboard', href: '/admin', icon: <Home className="size-4" /> },
     { label: 'Requests', href: '/admin/requests', icon: <File className="size-4" /> },
     { label: 'Teachers', href: '/admin/teachers', icon: <Users className="size-4" /> },
@@ -61,6 +60,7 @@ export function AppSidebar() {
     { label: 'Schools', href: '/admin/schools', icon: <School className="size-4" /> },
     { label: 'Districts', href: '/admin/districts', icon: <Map className="size-4" /> },
     { label: 'Subjects', href: '/admin/subjects', icon: <BookOpen className="size-4" /> },
+    { label: 'Users', href: '/admin/users', icon: <Users className="size-4" /> },
     { label: 'Profile', href: '/profile', icon: <User className="size-4" /> },
     { label: 'Notifications', href: '/notifications', icon: <Bell className="size-4" /> },
   ];

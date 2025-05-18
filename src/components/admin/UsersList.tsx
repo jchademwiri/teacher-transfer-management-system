@@ -1,10 +1,13 @@
 
 import React from 'react';
-import { UserCard } from './UserCard';
-import { Loader2, Search } from 'lucide-react';
+import { Table, TableHeader, TableHead, TableRow, TableBody, TableCell } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Search, Loader2, Edit } from 'lucide-react';
 import { Card, CardHeader, CardContent } from '@/components/ui/card';
 import { User } from '@/types';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 
 interface UsersListProps {
   users: User[];
@@ -26,6 +29,15 @@ export function UsersList({
     user.email.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(part => part.charAt(0))
+      .join('')
+      .toUpperCase()
+      .substring(0, 2);
+  };
+
   return (
     <Card className="mb-6">
       <CardHeader>
@@ -45,14 +57,50 @@ export function UsersList({
             <Loader2 className="h-6 w-6 animate-spin" />
           </div>
         ) : filteredUsers.length > 0 ? (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {filteredUsers.map((user) => (
-              <UserCard 
-                key={user.id} 
-                user={user} 
-                onEdit={onEditUser} 
-              />
-            ))}
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>User</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Role</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredUsers.map((user) => (
+                  <TableRow key={user.id}>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Avatar className="h-8 w-8">
+                          <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
+                        </Avatar>
+                        <span className="font-medium">{user.name}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>{user.email}</TableCell>
+                    <TableCell>
+                      <Badge variant="secondary">{user.role}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={user.isActive ? "secondary" : "destructive"}>
+                        {user.isActive ? "Active" : "Inactive"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => onEditUser(user)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </div>
         ) : (
           <div className="py-6 text-center">
