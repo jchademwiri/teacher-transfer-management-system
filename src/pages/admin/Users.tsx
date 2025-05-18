@@ -54,8 +54,8 @@ const UsersPage = () => {
         const { error } = await supabase
           .from('users')
           .insert({
+            name: values.name,
             email: values.email,
-            full_name: values.name,
             password: values.password,
             role: values.role,
             school_id: values.schoolId || null,
