@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { MainNavigation } from '@/components/MainNavigation';
+// import { MainNavigation } from '@/components/MainNavigation';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 import { File } from 'lucide-react';
@@ -40,7 +40,7 @@ const TeacherDashboard = () => {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
-        <MainNavigation />
+        {/* <MainNavigation /> */}
         <main className="container py-6">
           <p>Loading dashboard...</p>
         </main>
