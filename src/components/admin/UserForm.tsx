@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -47,6 +46,9 @@ export function UserForm({
       role: 'teacher',
       schoolId: '',
       subjectId: '',
+      ecNumber: '',
+      isActive: true,
+      setupComplete: false,
     },
   });
 
@@ -59,6 +61,9 @@ export function UserForm({
         role: 'teacher',
         schoolId: '',
         subjectId: '',
+        ecNumber: '',
+        isActive: true,
+        setupComplete: false,
       });
     } else if (isEditing && currentUser) {
       form.reset({
@@ -67,8 +72,10 @@ export function UserForm({
         password: '', // Do not populate password for security reasons
         role: currentUser.role,
         schoolId: currentUser.schoolId || '',
-        // SubjectId is not part of the User type, so we can't set it from currentUser
         subjectId: '',
+        ecNumber: currentUser.ecNumber || '',
+        isActive: currentUser.isActive ?? true,
+        setupComplete: currentUser.setupComplete ?? false,
       });
     }
   }, [isEditing, currentUser, form]);

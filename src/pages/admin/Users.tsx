@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -36,6 +35,11 @@ const UsersPage = () => {
             email: values.email,
             password: values.password,
             role: values.role,
+            school_id: values.schoolId || null,
+            subject_id: values.subjectId || null,
+            ec_number: values.ecNumber || null,
+            is_active: values.isActive,
+            setup_complete: values.setupComplete,
             updated_at: new Date().toISOString(),
           })
           .eq('id', currentUser.id);
@@ -52,7 +56,13 @@ const UsersPage = () => {
           .insert({
             email: values.email,
             full_name: values.name,
+            password: values.password,
             role: values.role,
+            school_id: values.schoolId || null,
+            subject_id: values.subjectId || null,
+            ec_number: values.ecNumber || null,
+            is_active: values.isActive,
+            setup_complete: values.setupComplete,
             token_identifier: values.email, // Using email as token identifier
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
