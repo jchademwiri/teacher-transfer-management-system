@@ -1,5 +1,5 @@
 
-import { School, Subject, TransferRequest, Teacher, District } from '@/types';
+import { School, Subject, TransferRequest, Teacher, District, User } from '@/types';
 
 export const mapSchool = (data: any): School => {
   return {
@@ -11,6 +11,20 @@ export const mapSchool = (data: any): School => {
     headmasterId: data.headmaster_id || null,
   };
 };
+
+export const mapUser = (data: any): User =>{
+return{
+  id: data.id || '',
+  email: data.email || '',
+  name: data.name || '',
+  role: data.role || 'teacher',
+  schoolId: data.school_id || null,
+  createdAt: data.created_at || new Date().toISOString(),
+  updatedAt: data.updated_at || new Date().toISOString(),
+  isActive: data.is_active ?? true,
+  setupComplete: data.setup_complete ?? false
+}
+}
 
 export const mapSubject = (data: any): Subject => {
   return {
