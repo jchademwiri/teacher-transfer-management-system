@@ -5,53 +5,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { User, School, Subject } from '@/types';
 import { mapSchool, mapSubject, mapUser } from '@/lib/mappers';
 
-// Define more specific types for the database query results
-interface TeacherRecord {
-  id: string;
-  user_id?: string;
-  school_id?: string;
-  ec_number?: string;
-  name?: string;
-  users?: {
-    id?: string;
-    email?: string;
-    name?: string;
-    is_active?: boolean;
-  } | null;
-  schools?: {
-    id?: string;
-    name?: string;
-    district?: string;
-  } | null;
-}
-
-interface HeadmasterRecord {
-  id: string;
-  user_id?: string;
-  school_id?: string;
-  ec_number?: string;
-  name?: string;
-  users?: {
-    id?: string;
-    email?: string;
-    name?: string;
-    is_active?: boolean;
-  } | null;
-  schools?: {
-    id?: string;
-    name?: string;
-    district?: string;
-  } | null;
-}
-
-interface AdminRecord {
-  id: string;
-  email?: string;
-  name?: string;
-  is_active?: boolean;
-  role?: string;
-}
-
 export function useUsersData() {
   const [users, setUsers] = useState<User[]>([]);
   const [schools, setSchools] = useState<School[]>([]);
@@ -60,20 +13,20 @@ export function useUsersData() {
   const { toast } = useToast();
 
   const fetchUsers = async () => {
-    // setIsLoading(true);
+    setIsLoading(true);
     try {
-      // Fetch teachers with their user information
+      // Fetch users directly from users table
       const { data, error } = await supabase
         .from('users')
         .select('*')
         .order('name');
 
-    if(error) throw error;
+      if(error) throw error;
 
-    if(data) {
-      const mappedUsers = data.map(mapUser);
-      setUsers(mappedUsers);
-    }
+      if(data) {
+        const mappedUsers = data.map(mapUser);
+        setUsers(mappedUsers);
+      }
     } catch (error) {
       console.error('Error fetching users:', error);
       toast({

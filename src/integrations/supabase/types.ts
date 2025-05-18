@@ -312,6 +312,8 @@ export type Database = {
           image: string | null
           is_active: boolean
           name: string | null
+          password: string | null
+          role: string | null
           setup_complete: boolean
           token_identifier: string
           updated_at: string | null
@@ -326,6 +328,8 @@ export type Database = {
           image?: string | null
           is_active?: boolean
           name?: string | null
+          password?: string | null
+          role?: string | null
           setup_complete?: boolean
           token_identifier: string
           updated_at?: string | null
@@ -340,6 +344,8 @@ export type Database = {
           image?: string | null
           is_active?: boolean
           name?: string | null
+          password?: string | null
+          role?: string | null
           setup_complete?: boolean
           token_identifier?: string
           updated_at?: string | null

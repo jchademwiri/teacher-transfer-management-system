@@ -1,6 +1,5 @@
 
 import React, { useState } from 'react';
-// import MainNavigation from '@/components/MainNavigation';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
@@ -37,16 +36,12 @@ const UsersPage = () => {
             email: values.email,
             password: values.password,
             role: values.role,
-            // school_id: values.schoolId,
-            // subject_id: values.subjectId,
             updated_at: new Date().toISOString(),
           })
           .eq('id', currentUser.id);
 
         if (error) throw error;
 
-        // Update existing user
-        // Implementation omitted for brevity
         toast({
           title: 'User updated',
           description: `${values.name} has been updated successfully.`,
@@ -58,16 +53,13 @@ const UsersPage = () => {
             email: values.email,
             full_name: values.name,
             role: values.role,
-            // subject_id: values.subjectId,
-            // school_id: values.schoolId,
             token_identifier: values.email, // Using email as token identifier
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
           });
 
         if (error) throw error;
-        // Create new user
-        // Implementation omitted for brevity
+        
         toast({
           title: 'User added',
           description: `${values.name} has been added successfully.`,
@@ -94,7 +86,6 @@ const UsersPage = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* <MainNavigation /> */}
       <div className="container py-6">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-3xl font-bold tracking-tight">Users</h1>
@@ -132,6 +123,6 @@ const UsersPage = () => {
       </div>
     </div>
   );
-};
+}
 
 export default UsersPage;
