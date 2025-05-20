@@ -111,6 +111,19 @@ export function UserForm({
         />
         <FormField
           control={form.control}
+          name="ecNumber"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>EC Number</FormLabel>
+              <FormControl>
+                <Input {...field} placeholder="Enter EC Number" />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
           name="password"
           render={({ field }) => (
             <FormItem>
