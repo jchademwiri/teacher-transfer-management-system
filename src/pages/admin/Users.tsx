@@ -33,11 +33,10 @@ const UsersPage = () => {
           .update({
             name: values.name,
             email: values.email,
-            password: values.password,
             role: values.role,
             school_id: values.schoolId || null,
             subject_id: values.subjectId || null,
-            ec_number: values.ecNumber || null,
+            ec_number: values.ecNumber,
             is_active: values.isActive,
             setup_complete: values.setupComplete,
             updated_at: new Date().toISOString(),
@@ -51,25 +50,38 @@ const UsersPage = () => {
           description: `${values.name} has been updated successfully.`,
         });
       } else {
-        const { error } = await supabase
+        const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
+          email: values.email,
+          password: values.password,
+          email_confirm: true,
+          user_metadata: {
+            name: values.name,
+            role: values.role,
+            ec_number: values.ecNumber,
+            school_id: values.schoolId || null,
+            subject_id: values.subjectId || null,
+          },
+        });
+        if (authError) throw authError;
+        if (!authUser || !authUser.user) throw new Error('Failed to create user in Auth');
+
+        const { error: dbError } = await supabase
           .from('users')
           .insert({
+            id: authUser.user.id,
             name: values.name,
             email: values.email,
-            password: values.password,
             role: values.role,
             school_id: values.schoolId || null,
             subject_id: values.subjectId || null,
-            ec_number: values.ecNumber || null,
+            ec_number: values.ecNumber,
             is_active: values.isActive,
             setup_complete: values.setupComplete,
-            token_identifier: values.email, // Using email as token identifier
+            token_identifier: values.email,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
           });
-
-        if (error) throw error;
-        
+        if (dbError) throw dbError;
         toast({
           title: 'User added',
           description: `${values.name} has been added successfully.`,
