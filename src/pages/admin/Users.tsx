@@ -50,38 +50,26 @@ const UsersPage = () => {
           description: `${values.name} has been updated successfully.`,
         });
       } else {
-        const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
-          email: values.email,
-          password: values.password,
-          email_confirm: true,
-          user_metadata: {
-            name: values.name,
-            role: values.role,
-            ec_number: values.ecNumber,
-            school_id: values.schoolId || null,
-            subject_id: values.subjectId || null,
+        // Call the Edge Function to create the user
+        const response = await fetch("/functions/v1/create-user", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            // In production, use a secure way to inject the admin secret
+            "Authorization": `Bearer ${import.meta.env.VITE_ADMIN_SECRET}`,
           },
-        });
-        if (authError) throw authError;
-        if (!authUser || !authUser.user) throw new Error('Failed to create user in Auth');
-
-        const { error: dbError } = await supabase
-          .from('users')
-          .insert({
-            id: authUser.user.id,
-            name: values.name,
+          body: JSON.stringify({
             email: values.email,
+            password: values.password,
+            name: values.name,
             role: values.role,
+            ec_number: values.ecNumber,
             school_id: values.schoolId || null,
             subject_id: values.subjectId || null,
-            ec_number: values.ecNumber,
-            is_active: values.isActive,
-            setup_complete: values.setupComplete,
-            token_identifier: values.email,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          });
-        if (dbError) throw dbError;
+          }),
+        });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || "Failed to create user");
         toast({
           title: 'User added',
           description: `${values.name} has been added successfully.`,
