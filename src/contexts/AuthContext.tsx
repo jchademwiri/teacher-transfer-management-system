@@ -1,6 +1,6 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User, UserRole } from '@/types';
+import { supabase } from '@/integrations/supabase/client';
 
 interface AuthContextType {
   user: User | null;
@@ -28,86 +28,76 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
-// Mock user data for demonstration
-const MOCK_USERS: User[] = [
-  {
-    id: "1",
-    email: "teacher@example.com",
-    ecNumber: "EC123456",
-    name: "John Teacher",
-    role: "teacher",
-    schoolId: "1",
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    isActive: true,
-    setupComplete: true
-  },
-  {
-    id: "2",
-    email: "headmaster@example.com",
-    ecNumber: "EC789012",
-    name: "Sarah Headmaster",
-    role: "headmaster",
-    schoolId: "1",
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    isActive: true,
-    setupComplete: true
-  },
-  {
-    id: "3",
-    email: "admin@example.com",
-    name: "Admin User",
-    role: "admin",
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    isActive: true,
-    setupComplete: true
-  }
-];
-
 export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   // Check for existing session on mount
   useEffect(() => {
-    const checkSession = () => {
-      try {
-        const storedUser = localStorage.getItem('user');
-        if (storedUser) {
-          const parsedUser = JSON.parse(storedUser);
-          console.log('Restored user session:', parsedUser); // Debug log
-          setUser(parsedUser);
+    const checkSession = async () => {
+      setIsLoading(true);
+      const { data } = await supabase.auth.getSession();
+      if (data.session && data.session.user) {
+        // Only fetch profile if there is a valid user
+        const { data: userData } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', data.session.user.id)
+          .single();
+        if (userData) {
+          setUser({
+            id: userData.id,
+            email: userData.email,
+            name: userData.name,
+            role: userData.role,
+            ecNumber: userData.ec_number,
+            schoolId: userData.school_id,
+            createdAt: userData.created_at,
+            updatedAt: userData.updated_at,
+            isActive: userData.is_active,
+            setupComplete: userData.setup_complete,
+          });
+        } else {
+          setUser(null);
         }
-      } catch (error) {
-        console.error('Session check failed', error);
-      } finally {
-        setIsLoading(false);
+      } else {
+        setUser(null);
       }
+      setIsLoading(false);
     };
-
     checkSession();
   }, []);
 
   const login = async (email: string, password: string): Promise<User> => {
     setIsLoading(true);
     try {
-      // In a real implementation, this would call Supabase auth
-      // For now, we'll mock it by finding a matching user
-      const foundUser = MOCK_USERS.find(u => u.email === email);
-      
-      if (!foundUser) {
-        throw new Error('Invalid credentials');
-      }
-      
-      console.log('Logging in user:', foundUser); // Debug log
-      setUser(foundUser);
-      localStorage.setItem('user', JSON.stringify(foundUser));
-      
-      return foundUser;
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error || !data.session) throw error || new Error('No session');
+      // Fetch user profile from users table
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', data.user.id)
+        .single();
+      if (userError || !userData) throw userError || new Error('User profile not found');
+      const userProfile: User = {
+        id: userData.id,
+        email: userData.email,
+        name: userData.name,
+        role: userData.role,
+        ecNumber: userData.ec_number,
+        schoolId: userData.school_id,
+        createdAt: userData.created_at,
+        updatedAt: userData.updated_at,
+        isActive: userData.is_active,
+        setupComplete: userData.setup_complete,
+      };
+      setUser(userProfile);
+      localStorage.setItem('user', JSON.stringify(userProfile));
+      return userProfile;
     } catch (error) {
-      console.error('Login failed', error);
+      setUser(null);
+      localStorage.removeItem('user');
       throw error;
     } finally {
       setIsLoading(false);
@@ -117,7 +107,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const logout = async () => {
     setIsLoading(true);
     try {
-      // In a real implementation, this would call Supabase auth sign out
+      await supabase.auth.signOut();
       setUser(null);
       localStorage.removeItem('user');
     } catch (error) {
