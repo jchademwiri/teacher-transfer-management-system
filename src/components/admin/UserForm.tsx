@@ -239,3 +239,5 @@ export function UserForm({
     </Form>
   );
 }
+
+export type { UserFormValues } from './UserFormSchema';
