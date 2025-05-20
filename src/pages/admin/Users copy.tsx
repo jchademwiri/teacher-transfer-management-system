@@ -37,7 +37,6 @@ const UsersPage = () => {
             school_id: values.schoolId || null,
             subject_id: values.subjectId || null,
             ec_number: values.ecNumber,
-            phone: values.phone,
             is_active: values.isActive,
             setup_complete: values.setupComplete,
             updated_at: new Date().toISOString(),
@@ -66,7 +65,6 @@ const UsersPage = () => {
               name: values.name,
               role: values.role,
               ec_number: values.ecNumber,
-              phone: values.phone,
               school_id: values.schoolId || null,
               subject_id: values.subjectId || null,
             }),
@@ -93,11 +91,7 @@ const UsersPage = () => {
   };
 
   const handleEdit = (user: User) => {
-    setCurrentUser({
-      ...user,
-      ecNumber: user.ecNumber || '',
-      phone: user.phone || '',
-    });
+    setCurrentUser(user);
     setIsEditing(true);
     setIsDialogOpen(true);
   };

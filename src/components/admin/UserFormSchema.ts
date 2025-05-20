@@ -9,7 +9,8 @@ export const userSchema = z.object({
   role: z.enum(USER_ROLES, {
     required_error: "Please select a role",
   }),
-  ecNumber: z.string().optional(),
+  ecNumber: z.string().min(1, { message: "EC Number is required" }),
+  phone: z.string().optional(),
   schoolId: z.string().optional(),
   subjectId: z.string().optional(),
   isActive: z.boolean().default(true),

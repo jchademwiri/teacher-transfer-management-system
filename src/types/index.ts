@@ -1,4 +1,3 @@
-
 export type UserRole = "teacher" | "headmaster" | "admin";
 
 export type RequestStatus = 
@@ -18,6 +17,7 @@ export interface User {
   name: string;
   role: UserRole;
   schoolId?: string;
+  phone?: string;
   createdAt: string;
   updatedAt: string;
   isActive: boolean;

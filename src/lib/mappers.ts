@@ -1,4 +1,3 @@
-
 import { School, Subject, TransferRequest, Teacher, District, User } from '@/types';
 
 export const mapSchool = (data: any): School => {
@@ -19,6 +18,8 @@ return{
   name: data.name || '',
   role: data.role || 'teacher',
   schoolId: data.school_id || null,
+  ecNumber: data.ec_number || '',
+  phone: data.phone || '',
   createdAt: data.created_at || new Date().toISOString(),
   updatedAt: data.updated_at || new Date().toISOString(),
   isActive: data.is_active ?? true,
