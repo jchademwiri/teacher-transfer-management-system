@@ -47,6 +47,7 @@ export function UserForm({
       schoolId: '',
       subjectId: '',
       ecNumber: '',
+      phone: '',
       isActive: true,
       setupComplete: false,
     },
@@ -62,6 +63,7 @@ export function UserForm({
         schoolId: '',
         subjectId: '',
         ecNumber: '',
+        phone: '',
         isActive: true,
         setupComplete: false,
       });
@@ -74,6 +76,7 @@ export function UserForm({
         schoolId: currentUser.schoolId || '',
         subjectId: '',
         ecNumber: currentUser.ecNumber || '',
+        phone: currentUser.phone || '',
         isActive: currentUser.isActive ?? true,
         setupComplete: currentUser.setupComplete ?? false,
       });
@@ -130,6 +133,19 @@ export function UserForm({
               <FormLabel>Password</FormLabel>
               <FormControl>
                 <Input {...field} type="password" placeholder="Enter password" />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="phone"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Phone Number</FormLabel>
+              <FormControl>
+                <Input {...field} placeholder="Enter phone number" />
               </FormControl>
               <FormMessage />
             </FormItem>

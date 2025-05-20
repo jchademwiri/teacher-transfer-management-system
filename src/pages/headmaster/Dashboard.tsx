@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { MainNavigation } from '@/components/MainNavigation';
+// import { MainNavigation } from '@/components/MainNavigation';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useDatabase } from '@/hooks/use-database';
@@ -47,7 +47,7 @@ const HeadmasterDashboard = () => {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
-        <MainNavigation />
+        {/* <MainNavigation /> */}
         <main className="container py-6">
           <p>Loading dashboard...</p>
         </main>

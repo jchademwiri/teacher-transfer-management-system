@@ -115,24 +115,11 @@ serve(async (req) => {
     }
 
     // 2. Insert user profile into users table
-    const { error: dbError } = await supabase.from("users").insert({
-      id: authUser.user.id,
-      name,
-      email,
-      role,
-      school_id: school_id || null,
-      subject_id: subject_id || null,
-      ec_number,
-      is_active: true,
-      setup_complete: false,
-      token_identifier: email,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    });
+    const { data, error } = await supabase.from("users").select("*").eq("id", authUser.user.id).single();
     
-    if (dbError) {
-      console.error("DB error:", dbError);
-      return new Response(JSON.stringify({ error: dbError.message }), 
+    if (error) {
+      console.error("DB error:", error);
+      return new Response(JSON.stringify({ error: error.message }), 
         { status: 400, headers: corsHeaders() });
     }
 

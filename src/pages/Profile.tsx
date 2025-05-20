@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -25,109 +24,52 @@ const ProfilePage = () => {
   const [userSubjects, setUserSubjects] = useState<any[]>([]);
 
   useEffect(() => {
-    const fetchUserByRole = async () => {
-      if (!authUser?.role) return;
-      
+    const fetchUserProfile = async () => {
+      if (!authUser?.id) return;
       setLoading(true);
       try {
-        // Fetch a user with the same role as the logged-in user
-        const { data, error } = await supabase
+        // Fetch the user by their own ID
+        const { data: userData, error } = await supabase
           .from('users')
           .select('*')
-          .eq('role', authUser.role)
-          .limit(1);
-        
+          .eq('id', authUser.id)
+          .single();
         if (error) throw error;
-        
-        if (data && data.length > 0) {
-          const userData = data[0];
+        if (userData) {
           setUser({
             id: userData.id,
             email: userData.email || '',
             name: userData.name || userData.full_name || '',
             role: userData.role as any,
-            ecNumber: '', // Will fetch this separately if needed
-            schoolId: '', // Will fetch this separately if needed
+            ecNumber: userData.ec_number || '',
+            schoolId: userData.school_id || '',
             createdAt: userData.created_at,
             updatedAt: userData.updated_at || userData.created_at,
             isActive: userData.is_active,
             setupComplete: userData.setup_complete
           });
-          
           setName(userData.name || userData.full_name || '');
           setEmail(userData.email || '');
-          
-          // If user is a teacher or headmaster, fetch additional details
-          if (userData.role === 'teacher') {
-            const { data: teacherData, error: teacherError } = await supabase
-              .from('teachers')
+          setEcNumber(userData.ec_number || '');
+          setPhone(userData.phone || '');
+          // Fetch school details
+          if (userData.school_id) {
+            const { data: schoolData } = await supabase
+              .from('schools')
               .select('*')
-              .eq('user_id', userData.id)
+              .eq('id', userData.school_id)
               .single();
-            
-            if (!teacherError && teacherData) {
-              setEcNumber(teacherData.ec_number || '');
-              
-              // Update user with additional info
-              setUser(prev => prev ? {
-                ...prev,
-                ecNumber: teacherData.ec_number,
-                schoolId: teacherData.school_id
-              } : null);
-              
-              // Fetch school details
-              if (teacherData.school_id) {
-                const { data: schoolData } = await supabase
-                  .from('schools')
-                  .select('*')
-                  .eq('id', teacherData.school_id)
-                  .single();
-                
-                if (schoolData) {
-                  setUserSchool(schoolData);
-                }
-              }
-              
-              // Fetch subjects
-              const { data: subjectsData } = await supabase
-                .from('subjects')
-                .select('*')
-                .limit(3); // Just get a few subjects for demonstration
-              
-              if (subjectsData) {
-                setUserSubjects(subjectsData);
-              }
+            if (schoolData) {
+              setUserSchool(schoolData);
             }
-          } else if (userData.role === 'headmaster') {
-            const { data: headmasterData, error: headmasterError } = await supabase
-              .from('headmasters')
-              .select('*')
-              .eq('user_id', userData.id)
-              .single();
-            
-            if (!headmasterError && headmasterData) {
-              setEcNumber(headmasterData.ec_number || '');
-              
-              // Update user with additional info
-              setUser(prev => prev ? {
-                ...prev,
-                ecNumber: headmasterData.ec_number,
-                schoolId: headmasterData.school_id
-              } : null);
-              
-              // Fetch school details
-              if (headmasterData.school_id) {
-                const { data: schoolData } = await supabase
-                  .from('schools')
-                  .select('*')
-                  .eq('id', headmasterData.school_id)
-                  .single();
-                
-                if (schoolData) {
-                  setUserSchool(schoolData);
-                }
-              }
-            }
+          }
+          // Fetch subjects (optional, if you want to show them)
+          const { data: subjectsData } = await supabase
+            .from('subjects')
+            .select('*')
+            .limit(3);
+          if (subjectsData) {
+            setUserSubjects(subjectsData);
           }
         }
       } catch (error) {
@@ -141,67 +83,40 @@ const ProfilePage = () => {
         setLoading(false);
       }
     };
-    
-    fetchUserByRole();
-  }, [authUser?.role, toast]);
+    fetchUserProfile();
+  }, [authUser?.id, toast]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    
     try {
       if (!user) return;
-
       // Update the users table
+      const updateData: any = {
+        name: name,
+        email: email,
+        phone: phone,
+        updated_at: new Date().toISOString()
+      };
+      // Only allow admin to update EC number
+      if (authUser?.role === 'admin') {
+        updateData.ec_number = ecNumber;
+      }
       const { error: userError } = await supabase
         .from('users')
-        .update({
-          name: name,
-          email: email,
-          updated_at: new Date().toISOString()
-        })
+        .update(updateData)
         .eq('id', user.id);
-      
       if (userError) throw userError;
-
-      // If it's a teacher or headmaster, update their respective tables
-      if (user.role === 'teacher') {
-        const { error: teacherError } = await supabase
-          .from('teachers')
-          .update({
-            name: name,
-            ec_number: ecNumber,
-            updated_at: new Date().toISOString()
-          })
-          .eq('user_id', user.id);
-        
-        if (teacherError) throw teacherError;
-      } else if (user.role === 'headmaster') {
-        const { error: headmasterError } = await supabase
-          .from('headmasters')
-          .update({
-            name: name,
-            ec_number: ecNumber,
-            updated_at: new Date().toISOString()
-          })
-          .eq('user_id', user.id);
-        
-        if (headmasterError) throw headmasterError;
-      }
-        
       toast({
         title: "Profile updated",
         description: "Your profile information has been updated successfully.",
       });
-
-      // Update local state to reflect changes
       setUser(prev => prev ? {
         ...prev,
         name: name,
         email: email,
-        ecNumber: ecNumber
+        ecNumber: authUser?.role === 'admin' ? ecNumber : prev.ecNumber
       } : null);
-
     } catch (error) {
       console.error('Error updating profile:', error);
       toast({
@@ -282,6 +197,7 @@ const ProfilePage = () => {
                       id="ecNumber"
                       value={ecNumber}
                       onChange={(e) => setEcNumber(e.target.value)}
+                      readOnly={authUser?.role !== 'admin'}
                     />
                   </div>
                 )}
