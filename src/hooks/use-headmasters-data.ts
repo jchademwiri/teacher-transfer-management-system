@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -32,20 +31,30 @@ export function useHeadmastersData() {
     setIsLoading(true);
     try {
       const { data, error } = await supabase
-        .from('headmasters')
+        .from('users')
         .select(`
-          *,
+          id,
+          name,
+          email,
+          ec_number,
+          school_id,
           schools:school_id (
-            id, 
-            name, 
+            id,
+            name,
             district,
             type
           )
         `)
+        .eq('role', 'headmaster')
         .order('name');
 
+      console.log('Headmasters data:', data, 'Error:', error);
+
       if (error) throw error;
-      setHeadmasters(data || []);
+      setHeadmasters((data || []).map((h: any) => ({
+        ...h,
+        schools: h.schools && h.schools.id ? h.schools : undefined
+      })));
     } catch (error) {
       console.error('Error fetching headmasters:', error);
       toast({
@@ -96,9 +105,9 @@ export function useHeadmastersData() {
         .update({ headmaster_id: null })
         .eq('id', schoolId);
       
-      // Delete headmaster
+      // Delete headmaster user
       const { error } = await supabase
-        .from('headmasters')
+        .from('users')
         .delete()
         .eq('id', id);
 
