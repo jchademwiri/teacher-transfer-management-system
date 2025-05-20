@@ -50,60 +50,28 @@ const UsersPage = () => {
           description: `${values.name} has been updated successfully.`,
         });
       } else {
-        // Store the admin secret in a variable for debugging
-        const ADMIN_SECRET = import.meta.env.VITE_ADMIN_SECRET;
-        
-        // Debug: Log admin secret presence (safely)
-        console.log("Admin secret exists:", !!ADMIN_SECRET);
-        console.log("Admin secret length:", ADMIN_SECRET ? ADMIN_SECRET.length : 0);
-        
-        // Prepare headers with the admin secret
-        const headers = {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${ADMIN_SECRET}`
-        };
-        
-        // Debug: Log headers (safely)
-        console.log("Headers being sent:", {
-          "Content-Type": headers["Content-Type"],
-          "Authorization": headers["Authorization"] ? 
-            `Bearer ${headers["Authorization"].substring(7, 10)}...` : "Missing"
-        });
-        
-        // Create the request body
-        const requestBody = {
-          email: values.email,
-          password: values.password,
-          name: values.name,
-          role: values.role,
-          ec_number: values.ecNumber,
-          school_id: values.schoolId || null,
-          subject_id: values.subjectId || null,
-        };
-
         // Call the Edge Function to create the user
         const response = await fetch(
           "https://pbujhnbcrkqslblrigxe.supabase.co/functions/v1/create-user",
           {
             method: "POST",
-            headers,
-            body: JSON.stringify(requestBody),
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${import.meta.env.VITE_ADMIN_SECRET}`,
+            },
+            body: JSON.stringify({
+              email: values.email,
+              password: values.password,
+              name: values.name,
+              role: values.role,
+              ec_number: values.ecNumber,
+              school_id: values.schoolId || null,
+              subject_id: values.subjectId || null,
+            }),
           }
         );
-        
-        // Debug: Log the response status
-        console.log("Response status:", response.status);
-        
-        // Get the response data
-        const responseData = await response.json();
-        
-        // Debug: Log the response data
-        console.log("Response data:", responseData);
-        
-        if (!response.ok) {
-          throw new Error(responseData.error || `Failed to create user: ${response.status}`);
-        }
-        
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || "Failed to create user");
         toast({
           title: 'User added',
           description: `${values.name} has been added successfully.`,
