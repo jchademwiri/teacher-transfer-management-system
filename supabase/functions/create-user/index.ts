@@ -1,18 +1,9 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-const ADMIN_SECRET = Deno.env.get("ADMIN_SECRET"); // Set this in your Edge Function env
-
-if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY || !ADMIN_SECRET) {
-  console.error("Missing required environment variables:", {
-    SUPABASE_URL,
-    SUPABASE_SERVICE_ROLE_KEY,
-    ADMIN_SECRET,
-  });
-  throw new Error("Missing one or more required environment variables: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, ADMIN_SECRET");
-}
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const ADMIN_SECRET = Deno.env.get("ADMIN_SECRET")!; // Set this in your Edge Function env
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 

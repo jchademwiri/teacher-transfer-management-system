@@ -1,5 +1,4 @@
-
-import React from 'react';
+import React, { useState } from 'react';
 // import { MainNavigation } from '@/components/MainNavigation';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
@@ -12,6 +11,17 @@ import { TeachingInfoCard } from '@/components/dashboard/TeachingInfoCard';
 import { NotificationsCard } from '@/components/dashboard/NotificationsCard';
 import { RecentActivityTable } from '@/components/dashboard/RecentActivityTable';
 import { useDatabase } from '@/hooks/use-database';
+import { TransferRequest, User } from '@/types';
+
+function mapTransferRequest(row) {
+  return {
+    ...row,
+    updatedAt: row.updated_at,
+    toSchoolId: row.to_school_id,
+    toDistrict: row.to_district,
+    // ...map other fields as needed
+  };
+}
 
 const TeacherDashboard = () => {
   const { 
@@ -28,14 +38,40 @@ const TeacherDashboard = () => {
   
   const { isConnected } = useDatabase();
 
-  // Format past requests for the activity table
-  const formattedPastRequests = pastRequests.map(request => ({
-    id: request.id,
-    date: formatDate(request.submitted_at),
-    destination: request.to_school_id && request.schools ? 
-      request.schools.name : request.to_district || 'Unspecified',
-    status: request.status
-  }));
+  const [pastRequestsState, setPastRequestsState] = useState<TransferRequest[]>([]);
+
+  // Combine activeRequest (if present) with pastRequests, avoiding duplicates
+  let allRequests: TransferRequest[] = pastRequests;
+  if (activeRequest && !pastRequests.some(r => r.id === activeRequest.id)) {
+    allRequests = [activeRequest, ...pastRequests];
+  }
+
+  // Format all requests for the activity table, including status updates
+  const formattedPastRequests = allRequests.map((request: TransferRequest) => {
+    // Date: use updatedAt
+    const date = formatDate(request.updatedAt);
+    // Destination logic
+    let destination = 'Unspecified';
+    if (request.toSchoolId) {
+      const schoolName = getSchoolName(request.toSchoolId);
+      destination = schoolName;
+      if (request.toDistrict) {
+        destination += `, ${request.toDistrict}`;
+      }
+    } else if (request.toDistrict) {
+      destination = `Any School, ${request.toDistrict}`;
+    }
+    return {
+      id: request.id,
+      date,
+      destination,
+      status: request.status,
+      headmasterStatus: request.headmasterComment || '',
+      adminStatus: request.adminComment || '',
+      headmasterActionAt: request.headmasterActionAt,
+      adminActionAt: request.adminActionAt,
+    };
+  });
 
   if (isLoading) {
     return (
@@ -77,7 +113,7 @@ const TeacherDashboard = () => {
           
           {/* Teaching Information Card */}
           <TeachingInfoCard 
-            ecNumber={(user as any).ecNumber}
+            ecNumber={user.ecNumber}
             level={(user as any).level}
             subjects={subjects}
           />
@@ -93,6 +129,7 @@ const TeacherDashboard = () => {
           isTeacherView={true}
           linkText="View All History"
           linkPath="/history"
+          title="Transfer Request Log"
         />
       </main>
     </div>
