@@ -51,6 +51,14 @@ const UsersPage = () => {
           description: `${values.name} has been updated successfully.`,
         });
       } else {
+        // Get the admin secret from environment variables
+        // IMPORTANT: VITE_ADMIN_SECRET must match the ADMIN_SECRET set in your Edge Function's environment variables
+        const adminSecret = import.meta.env.VITE_ADMIN_SECRET;
+        
+        if (!adminSecret) {
+          throw new Error("Admin secret is not defined in environment variables");
+        }
+
         // Call the Edge Function to create the user
         const response = await fetch(
           "https://pbujhnbcrkqslblrigxe.supabase.co/functions/v1/create-user",
@@ -58,7 +66,7 @@ const UsersPage = () => {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
-              "Authorization": `Bearer ${import.meta.env.VITE_ADMIN_SECRET}`,
+              "Authorization": `Bearer ${adminSecret}`,
             },
             body: JSON.stringify({
               email: values.email,
@@ -66,14 +74,22 @@ const UsersPage = () => {
               name: values.name,
               role: values.role,
               ec_number: values.ecNumber,
-              phone: values.phone,
+              phone: values.phone || null,
               school_id: values.schoolId || null,
               subject_id: values.subjectId || null,
             }),
           }
         );
+        
+        // Parse the response
         const result = await response.json();
-        if (!response.ok) throw new Error(result.error || "Failed to create user");
+        
+        // Check if the request was successful
+        if (!response.ok) {
+          console.error("Error details:", result);
+          throw new Error(result.error || "Failed to create user");
+        }
+        
         toast({
           title: 'User added',
           description: `${values.name} has been added successfully.`,
@@ -86,7 +102,7 @@ const UsersPage = () => {
       console.error('Error saving user:', error);
       toast({
         title: 'Error',
-        description: 'Failed to save user',
+        description: 'Failed to save user: ' + (error.message || 'Unknown error'),
         variant: 'destructive',
       });
     }
@@ -107,7 +123,7 @@ const UsersPage = () => {
       <div className="container py-6">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-3xl font-bold tracking-tight">Users</h1>
-          <Button onClick={() => { setIsEditing(false); setIsDialogOpen(true); }}>
+          <Button onClick={() => { setIsEditing(false); setCurrentUser(null); setIsDialogOpen(true); }}>
             <PlusCircle className="mr-2 h-4 w-4" />
             Add User
           </Button>
