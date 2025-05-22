@@ -11,7 +11,7 @@ import { TeachingInfoCard } from '@/components/dashboard/TeachingInfoCard';
 import { NotificationsCard } from '@/components/dashboard/NotificationsCard';
 import { RecentActivityTable } from '@/components/dashboard/RecentActivityTable';
 import { useDatabase } from '@/hooks/use-database';
-import { TransferRequest } from '@/types';
+import { TransferRequest, User } from '@/types';
 
 function mapTransferRequest(row) {
   return {
@@ -113,7 +113,7 @@ const TeacherDashboard = () => {
           
           {/* Teaching Information Card */}
           <TeachingInfoCard 
-            ecNumber={(user as any).ecNumber}
+            ecNumber={user.ecNumber}
             level={(user as any).level}
             subjects={subjects}
           />
