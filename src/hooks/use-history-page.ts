@@ -34,6 +34,8 @@ export function useHistoryPage(role: 'teacher' | 'headmaster', itemsPerPage = 5)
   // Special state for headmaster view
   const [schoolId, setSchoolId] = useState<string | null>(null);
   
+  const [schools, setSchools] = useState<any[]>([]);
+  
   useEffect(() => {
     async function fetchData() {
       if (!user) return;
@@ -60,7 +62,7 @@ export function useHistoryPage(role: 'teacher' | 'headmaster', itemsPerPage = 5)
           // Fetch transfer requests for this teacher
           const { data: requestsData, error: requestsError } = await supabase
             .from('transfer_requests')
-            .select('*, schools!to_school_id(*)')
+            .select('*')
             .eq('teacher_id', teacherData.id);
           
           console.log('Fetched transfer requests for history:', requestsData);
@@ -70,8 +72,15 @@ export function useHistoryPage(role: 'teacher' | 'headmaster', itemsPerPage = 5)
             setError(requestsError.message);
             return;
           }
-          
           setRequests(requestsData || []);
+
+          // Fetch all schools for lookup
+          const { data: schoolsData, error: schoolsError } = await supabase
+            .from('schools')
+            .select('id, name');
+          if (!schoolsError && schoolsData) {
+            setSchools(schoolsData);
+          }
         } 
         else if (role === 'headmaster') {
           // Get headmaster's school
@@ -175,9 +184,11 @@ export function useHistoryPage(role: 'teacher' | 'headmaster', itemsPerPage = 5)
   
   // Helper function to get destination display name
   const getDestination = (request: any) => {
-    return request.to_school_id && request.schools 
-      ? request.schools.name
-      : request.to_district || 'Unspecified';
+    if (request.to_school_id) {
+      const school = schools.find(s => s.id === request.to_school_id);
+      return school ? school.name : 'Unknown School';
+    }
+    return request.to_district || 'Unspecified';
   };
   
   // Get paginated data
@@ -202,5 +213,6 @@ export function useHistoryPage(role: 'teacher' | 'headmaster', itemsPerPage = 5)
     formatDate,
     getDestination,
     schoolId,
+    schools,
   };
 }

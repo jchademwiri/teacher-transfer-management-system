@@ -1,5 +1,4 @@
-
-import React from 'react';
+import React, { useState } from 'react';
 // import { MainNavigation } from '@/components/MainNavigation';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
@@ -12,6 +11,7 @@ import { TeachingInfoCard } from '@/components/dashboard/TeachingInfoCard';
 import { NotificationsCard } from '@/components/dashboard/NotificationsCard';
 import { RecentActivityTable } from '@/components/dashboard/RecentActivityTable';
 import { useDatabase } from '@/hooks/use-database';
+import { TransferRequest } from '@/types';
 
 const TeacherDashboard = () => {
   const { 
@@ -28,13 +28,26 @@ const TeacherDashboard = () => {
   
   const { isConnected } = useDatabase();
 
-  // Format past requests for the activity table
-  const formattedPastRequests = pastRequests.map(request => ({
+  const [pastRequestsState, setPastRequestsState] = useState<TransferRequest[]>([]);
+
+  // Combine activeRequest (if present) with pastRequests, avoiding duplicates
+  let allRequests: TransferRequest[] = pastRequests;
+  if (activeRequest && !pastRequests.some(r => r.id === activeRequest.id)) {
+    allRequests = [activeRequest, ...pastRequests];
+  }
+
+  // Format all requests for the activity table, including status updates
+  const formattedPastRequests = allRequests.map((request: TransferRequest) => ({
     id: request.id,
-    date: formatDate(request.submitted_at),
-    destination: request.to_school_id && request.schools ? 
-      request.schools.name : request.to_district || 'Unspecified',
-    status: request.status
+    date: formatDate(request.submittedAt),
+    destination: request.toSchoolId
+      ? getSchoolName(request.toSchoolId)
+      : request.toDistrict || 'Unspecified',
+    status: request.status,
+    headmasterStatus: request.headmasterComment || '',
+    adminStatus: request.adminComment || '',
+    headmasterActionAt: request.headmasterActionAt,
+    adminActionAt: request.adminActionAt,
   }));
 
   if (isLoading) {
@@ -93,6 +106,7 @@ const TeacherDashboard = () => {
           isTeacherView={true}
           linkText="View All History"
           linkPath="/history"
+          title="Transfer Request Log"
         />
       </main>
     </div>

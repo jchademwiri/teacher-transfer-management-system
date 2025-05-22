@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -11,6 +10,10 @@ interface RecentActivity {
   teacherId?: string;
   destination: string;
   status: any;
+  headmasterStatus?: string;
+  headmasterActionAt?: string;
+  adminStatus?: string;
+  adminActionAt?: string;
 }
 
 interface RecentActivityTableProps {
@@ -19,6 +22,7 @@ interface RecentActivityTableProps {
   isTeacherView?: boolean;
   linkText?: string;
   linkPath?: string;
+  title?: string;
 }
 
 export function RecentActivityTable({ 
@@ -26,13 +30,14 @@ export function RecentActivityTable({
   basePath, 
   isTeacherView = false,
   linkText = "View All",
-  linkPath = "/history"
+  linkPath = "/history",
+  title = "Recent Activity"
 }: RecentActivityTableProps) {
   return (
     <div className="mt-8">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-semibold">
-          {isTeacherView ? "Past Transfer Requests" : "Recent Activity"}
+          {title}
         </h2>
         <Button asChild variant="outline" size="sm">
           <Link to={`${basePath}${linkPath}`}>{linkText}</Link>
@@ -47,6 +52,8 @@ export function RecentActivityTable({
                 <th className="px-4 py-3 text-left">Date</th>
                 <th className="px-4 py-3 text-left">Destination</th>
                 <th className="px-4 py-3 text-left">Status</th>
+                {isTeacherView && <th className="px-4 py-3 text-left">Headmaster Update</th>}
+                {isTeacherView && <th className="px-4 py-3 text-left">Admin Update</th>}
                 {!isTeacherView && <th className="px-4 py-3 text-right">Action</th>}
               </tr>
             </thead>
@@ -60,6 +67,22 @@ export function RecentActivityTable({
                     <td className="px-4 py-3">
                       <StatusBadge status={activity.status} />
                     </td>
+                    {isTeacherView && (
+                      <td className="px-4 py-3">
+                        {activity.headmasterStatus || '—'}
+                        {activity.headmasterActionAt && (
+                          <div className="text-xs text-muted-foreground">{activity.headmasterActionAt}</div>
+                        )}
+                      </td>
+                    )}
+                    {isTeacherView && (
+                      <td className="px-4 py-3">
+                        {activity.adminStatus || '—'}
+                        {activity.adminActionAt && (
+                          <div className="text-xs text-muted-foreground">{activity.adminActionAt}</div>
+                        )}
+                      </td>
+                    )}
                     {!isTeacherView && (
                       <td className="px-4 py-3 text-right">
                         <Button asChild variant="ghost" size="sm">
@@ -73,8 +96,8 @@ export function RecentActivityTable({
                 ))
               ) : (
                 <tr>
-                  <td colSpan={isTeacherView ? 3 : 5} className="px-4 py-6 text-center text-muted-foreground">
-                    {isTeacherView ? "No past transfer requests found" : "No recent activity found"}
+                  <td colSpan={isTeacherView ? 5 : 5} className="px-4 py-6 text-center text-muted-foreground">
+                    {isTeacherView ? "No transfer requests found" : "No recent activity found"}
                   </td>
                 </tr>
               )}

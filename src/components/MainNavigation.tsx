@@ -36,7 +36,7 @@ const MainNavigation = () => {
   const getTeacherMenu = () => [
     { name: "Dashboard", path: "/dashboard" },
     { name: "Transfer Request", path: "/dashboard/transfer" },
-    { name: "Request History", path: "/history" },  
+    { name: "Request History", path: "/dashboard/history" },  
   ];
 
   // Get all headmaster menu items

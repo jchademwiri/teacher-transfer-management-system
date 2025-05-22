@@ -111,7 +111,7 @@ function App() {
           </RouteGuard>
         } />
         
-        <Route path="/history" element={
+        <Route path="/dashboard/history" element={
           <RouteGuard allowedRoles={['teacher']}>
             <TransferHistoryPage />
           </RouteGuard>
