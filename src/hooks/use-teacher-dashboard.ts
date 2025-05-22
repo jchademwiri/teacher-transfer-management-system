@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { TransferRequest, School, Subject } from '@/types';
@@ -28,9 +27,10 @@ export function useTeacherDashboard() {
       try {
         // First, get the teacher record for this user
         const { data: teacherData, error: teacherError } = await supabase
-          .from('teachers')
+          .from('users')
           .select('id, school_id, ec_number, level')
-          .eq('user_id', user.id)
+          .eq('id', user.id)
+          .eq('role', 'teacher')
           .single();
 
         if (teacherError) {

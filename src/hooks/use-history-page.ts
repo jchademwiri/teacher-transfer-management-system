@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { RequestStatus, TransferRequest } from '@/types';
@@ -45,10 +44,13 @@ export function useHistoryPage(role: 'teacher' | 'headmaster', itemsPerPage = 5)
         if (role === 'teacher') {
           // First, get the teacher record for this user
           const { data: teacherData, error: teacherError } = await supabase
-            .from('teachers')
+            .from('users')
             .select('id')
-            .eq('user_id', user.id)
+            .eq('id', user.id)
+            .eq('role', 'teacher')
             .single();
+          
+          console.log('Current user id:', user.id, 'teacherData.id:', teacherData?.id);
           
           if (teacherError || !teacherData) {
             console.error('Error or no teacher data:', teacherError);
@@ -60,6 +62,8 @@ export function useHistoryPage(role: 'teacher' | 'headmaster', itemsPerPage = 5)
             .from('transfer_requests')
             .select('*, schools!to_school_id(*)')
             .eq('teacher_id', teacherData.id);
+          
+          console.log('Fetched transfer requests for history:', requestsData);
           
           if (requestsError) {
             console.error('Error fetching requests:', requestsError);

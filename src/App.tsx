@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -106,7 +105,7 @@ function App() {
           </RouteGuard>
         } />
         
-        <Route path="/transfer" element={
+        <Route path="/dashboard/transfer" element={
           <RouteGuard allowedRoles={['teacher']}>
             <TransferPage />
           </RouteGuard>
