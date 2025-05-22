@@ -122,7 +122,7 @@ export function useTeacherDashboard() {
 
           console.log('Fetched transfer requests for dashboard:', allRequestsData);
 
-          setPastRequests(allRequestsData || []);
+          setPastRequests((allRequestsData || []).map(mapTransferRequest));
         }
       } catch (err) {
         console.error('Error fetching dashboard data:', err);

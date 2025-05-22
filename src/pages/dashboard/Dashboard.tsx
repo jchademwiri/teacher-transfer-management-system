@@ -13,6 +13,16 @@ import { RecentActivityTable } from '@/components/dashboard/RecentActivityTable'
 import { useDatabase } from '@/hooks/use-database';
 import { TransferRequest } from '@/types';
 
+function mapTransferRequest(row) {
+  return {
+    ...row,
+    updatedAt: row.updated_at,
+    toSchoolId: row.to_school_id,
+    toDistrict: row.to_district,
+    // ...map other fields as needed
+  };
+}
+
 const TeacherDashboard = () => {
   const { 
     user,
@@ -37,18 +47,31 @@ const TeacherDashboard = () => {
   }
 
   // Format all requests for the activity table, including status updates
-  const formattedPastRequests = allRequests.map((request: TransferRequest) => ({
-    id: request.id,
-    date: formatDate(request.submittedAt),
-    destination: request.toSchoolId
-      ? getSchoolName(request.toSchoolId)
-      : request.toDistrict || 'Unspecified',
-    status: request.status,
-    headmasterStatus: request.headmasterComment || '',
-    adminStatus: request.adminComment || '',
-    headmasterActionAt: request.headmasterActionAt,
-    adminActionAt: request.adminActionAt,
-  }));
+  const formattedPastRequests = allRequests.map((request: TransferRequest) => {
+    // Date: use updatedAt
+    const date = formatDate(request.updatedAt);
+    // Destination logic
+    let destination = 'Unspecified';
+    if (request.toSchoolId) {
+      const schoolName = getSchoolName(request.toSchoolId);
+      destination = schoolName;
+      if (request.toDistrict) {
+        destination += `, ${request.toDistrict}`;
+      }
+    } else if (request.toDistrict) {
+      destination = `Any School, ${request.toDistrict}`;
+    }
+    return {
+      id: request.id,
+      date,
+      destination,
+      status: request.status,
+      headmasterStatus: request.headmasterComment || '',
+      adminStatus: request.adminComment || '',
+      headmasterActionAt: request.headmasterActionAt,
+      adminActionAt: request.adminActionAt,
+    };
+  });
 
   if (isLoading) {
     return (
