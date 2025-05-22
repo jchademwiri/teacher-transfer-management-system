@@ -53,9 +53,10 @@ export function useTransferForm() {
         
         // Get teacher ID and school
         const { data: teacherData } = await supabase
-          .from('teachers')
+          .from('users')
           .select('id, school_id')
-          .eq('user_id', user.id)
+          .eq('id', user.id)
+          .eq('role', 'teacher')
           .single();
           
         if (teacherData) {

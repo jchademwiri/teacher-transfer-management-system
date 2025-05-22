@@ -1,4 +1,3 @@
-
 import React from 'react';
 // import { MainNavigation } from '@/components/MainNavigation';
 import { Card, CardContent } from '@/components/ui/card';

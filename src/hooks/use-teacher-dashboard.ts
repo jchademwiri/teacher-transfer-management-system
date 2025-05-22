@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { TransferRequest, School, Subject } from '@/types';
@@ -19,6 +18,7 @@ export function useTeacherDashboard() {
   const [pastRequests, setPastRequests] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [schools, setSchools] = useState<School[]>([]);
 
   useEffect(() => {
     async function fetchTeacherData() {
@@ -28,9 +28,10 @@ export function useTeacherDashboard() {
       try {
         // First, get the teacher record for this user
         const { data: teacherData, error: teacherError } = await supabase
-          .from('teachers')
-          .select('id, school_id, ec_number, level')
-          .eq('user_id', user.id)
+          .from('users')
+          .select('id, school_id, ec_number')
+          .eq('id', user.id)
+          .eq('role', 'teacher')
           .single();
 
         if (teacherError) {
@@ -50,7 +51,6 @@ export function useTeacherDashboard() {
             .from('transfer_requests')
             .select('*')
             .eq('teacher_id', teacherData.id)
-            .in('status', ['pending_head_approval', 'forwarded_to_admin'])
             .order('submitted_at', { ascending: false })
             .limit(1)
             .single();
@@ -67,6 +67,12 @@ export function useTeacherDashboard() {
 
             setSchool(schoolData ? mapSchool(schoolData) : null);
           }
+
+          // Get all schools for lookup
+          const { data: schoolsData } = await supabase
+            .from('schools')
+            .select('id, name');
+          setSchools(schoolsData || []);
 
           // Get teacher's subjects
           const { data: teacherSubjects } = await supabase
@@ -107,16 +113,16 @@ export function useTeacherDashboard() {
             type: n.type,
           })) || []);
 
-          // Get past requests
-          const { data: pastRequestsData } = await supabase
+          // Get ALL transfer requests for this teacher (not just completed)
+          const { data: allRequestsData } = await supabase
             .from('transfer_requests')
-            .select('*, schools!to_school_id(*)')
+            .select('*')
             .eq('teacher_id', teacherData.id)
-            .not('status', 'in', '("pending_head_approval", "forwarded_to_admin")')
-            .order('submitted_at', { ascending: false })
-            .limit(3);
+            .order('submitted_at', { ascending: false });
 
-          setPastRequests(pastRequestsData || []);
+          console.log('Fetched transfer requests for dashboard:', allRequestsData);
+
+          setPastRequests((allRequestsData || []).map(mapTransferRequest));
         }
       } catch (err) {
         console.error('Error fetching dashboard data:', err);
@@ -148,10 +154,10 @@ export function useTeacherDashboard() {
     return new Date(dateString).toLocaleDateString();
   };
 
-  // Helper function to get school name (based on current data in state)
+  // Helper function to get school name (based on all schools)
   const getSchoolName = (schoolId: string) => {
-    if (school && school.id === schoolId) return school.name;
-    return "Unknown School"; // Fallback
+    const found = schools.find(s => s.id === schoolId);
+    return found ? found.name : 'Unknown School';
   };
 
   return {
