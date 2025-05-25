@@ -56,9 +56,7 @@ const HeadmasterDashboard = () => {
     };
   });
 
-  // Debug logs
-  console.log('recentActivity', recentActivity);
-  console.log('formattedActivity', formattedActivity);
+
 
   if (isLoading) {
     return (
