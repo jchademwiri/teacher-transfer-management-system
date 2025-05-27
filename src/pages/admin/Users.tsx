@@ -57,78 +57,68 @@ const UsersPage = () => {
         toast({
           title: 'User updated',
           description: `${values.name} has been updated successfully.`,
-        });      } else {        // Use the pre-created admin client
-        const adminAuthClient = adminClient.auth.admin;        try {
-          // Create user with admin privileges
-          const { data: userData, error: userError } = await adminAuthClient.createUser({
-            email: values.email,
-            password: values.password,
-            email_confirm: true,
-            user_metadata: { 
-              name: values.name,
-              role: values.role,
-              ec_number: values.ecNumber,
-            },
-          });
-
-          if (userError) {
-            console.error("Error creating user:", userError);
-            throw userError;
+        });
+      } else {
+        // Create user with admin privileges
+        const { data: userData, error: userError } = await adminClient.auth.admin.createUser({
+          email: values.email,
+          password: values.password,
+          email_confirm: true,
+          user_metadata: { 
+            name: values.name,
+            role: values.role,
+            ec_number: values.ecNumber,
+            is_active: true,
+            setup_complete: true
+          },
+          app_metadata: {
+            role: values.role
           }
+        });
 
-          if (!userData?.user?.id) {
-            throw new Error("User creation successful but no user ID returned");
-          }
-
-          // Create user profile in users table
-          const { error: profileError } = await supabase
-            .from('users')
-            .insert({
-              id: userData.user.id,
-              name: values.name,
-              email: values.email,
-              role: values.role,
-              ec_number: values.ecNumber,
-              phone: values.phone || null,
-              school_id: values.schoolId || null,
-              subject_id: values.subjectId || null,
-              is_active: true,
-              setup_complete: true,
-              token_identifier: userData.user.id,
-              updated_at: new Date().toISOString(),
-              created_at: new Date().toISOString()
-            });
-
-          if (profileError) {
-            throw profileError;
-          }
-
-          // Update user status
-          const { error: updateError } = await adminAuthClient.updateUser(userData.user.id, {
-            user_metadata: { 
-              name: values.name,
-              role: values.role,
-              ec_number: values.ecNumber,
-              is_active: true,
-              setup_complete: true
-            },
-            app_metadata: { role: values.role }
-          });
-
-          if (updateError) {
-            throw updateError;
-          }if (profileError) {
-          // If profile creation fails, we should clean up the auth user
-          await adminAuthClient.deleteUser(userData.user.id);
-          console.error("Error creating user profile:", profileError);
-          throw new Error(`Failed to create user profile: ${profileError.message}`);
+        if (userError) {
+          console.error("Error creating user:", userError);
+          throw userError;
         }
-        
+
+        if (!userData?.user?.id) {
+          throw new Error("User creation successful but no user ID returned");
+        }
+
+        // Wait a moment for the trigger to create the user profile
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        // Update the user profile with additional fields
+        const { error: updateError } = await supabase
+          .from('users')
+          .update({
+            name: values.name,
+            email: values.email,
+            role: values.role,
+            ec_number: values.ecNumber,
+            phone: values.phone || null,
+            school_id: values.schoolId || null,
+            subject_id: values.subjectId || null,
+            is_active: true,
+            setup_complete: true,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', userData.user.id);
+
+        if (updateError && updateError.code !== '23505') { // Ignore duplicate key errors
+          console.error("Error updating user profile:", updateError);
+          // Clean up the auth user if update fails
+          await adminClient.auth.admin.deleteUser(userData.user.id);
+          throw new Error(`Failed to update user profile: ${updateError.message}`);
+        }
+
         toast({
           title: 'User added',
           description: `${values.name} has been added successfully.`,
         });
-      }      setIsEditing(false);
+      }
+
+      setIsEditing(false);
       setCurrentUser(null);
       fetchUsers();
     } catch (error) {
