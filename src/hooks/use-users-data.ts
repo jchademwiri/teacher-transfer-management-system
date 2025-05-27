@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -10,21 +9,29 @@ export function useUsersData() {
   const [schools, setSchools] = useState<School[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const { toast } = useToast();
-
-  const fetchUsers = async () => {
+  const { toast } = useToast();  const fetchUsers = async () => {
     setIsLoading(true);
     try {
-      // Fetch users directly from users table
       const { data, error } = await supabase
         .from('users')
-        .select('*')
+        .select(`
+          *,
+          school:schools (
+            id,
+            name,
+            type,
+            district
+          )
+        `)
         .order('name');
 
       if(error) throw error;
 
       if(data) {
-        const mappedUsers = data.map(mapUser);
+        const mappedUsers = data.map((userData: any) => ({
+          ...mapUser(userData),
+          school: userData.school
+        }));
         setUsers(mappedUsers);
       }
     } catch (error) {
@@ -85,10 +92,43 @@ export function useUsersData() {
     }
   };
 
+  const updateUserStatus = async (userId: string, isActive: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update({ 
+          is_active: isActive,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', userId);
+
+      if (error) throw error;
+
+      // Optimistically update the UI
+      setUsers(currentUsers => 
+        currentUsers.map(user => 
+          user.id === userId ? { ...user, isActive } : user
+        )
+      );
+
+      return Promise.resolve();
+    } catch (error) {
+      console.error('Error updating user status:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update user status',
+        variant: 'destructive',
+      });
+      return Promise.reject(error);
+    }
+  };
   useEffect(() => {
     fetchUsers();
     fetchSchools();
     fetchSubjects();
+    // We don't want to include these functions in the dependency array
+    // as they are stable and won't change between renders
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return {
@@ -97,7 +137,6 @@ export function useUsersData() {
     subjects,
     isLoading,
     fetchUsers,
-    fetchSchools,
-    fetchSubjects
+    updateUserStatus,
   };
 }

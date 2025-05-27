@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -140,8 +139,9 @@ export function useHeadmasterTeachers() {
 
           // Fetch all teachers in the school
           const { data: teachersData, error: teachersError } = await supabase
-            .from('teachers')
+            .from('users')
             .select('*')
+            .eq('role', 'teacher')
             .eq('school_id', user.schoolId);
 
           if (teachersError) {
