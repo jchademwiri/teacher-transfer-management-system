@@ -37,7 +37,9 @@ export function UsersList({
     user.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     user.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     user.ecNumber?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    user.role?.toLowerCase().includes(searchQuery.toLowerCase())
+    user.role?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    user.school?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    user.school?.district?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const getInitials = (name: string) => {
@@ -47,7 +49,12 @@ export function UsersList({
       .join('')
       .toUpperCase()
       .substring(0, 2) || '??';
-  };  // Get updateUserStatus from the hook
+  };
+
+  const getSchoolInfo = (user: User) => {
+    if (!user.school) return '-';
+    return `${user.school.name} - ${user.school.district || 'No District'}`;
+  };
 
   const handleStatusChange = async (userId: string, checked: boolean) => {
     try {
@@ -122,7 +129,7 @@ export function UsersList({
                         {user.role}
                       </Badge>
                     </TableCell>                    <TableCell>{user.ecNumber || '-'}</TableCell>
-                    <TableCell>{user.schoolId ? 'School ' + user.schoolId : '-'}</TableCell>                    <TableCell>
+                    <TableCell>{getSchoolInfo(user)}</TableCell>                    <TableCell>
                       <div className="flex items-center space-x-2">
                         <UserStatusToggle
                           userId={user.id}

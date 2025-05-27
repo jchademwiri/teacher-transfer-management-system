@@ -22,6 +22,12 @@ export interface User {
   updatedAt: string;
   isActive: boolean;
   setupComplete: boolean;
+  school?: {
+    id: string;
+    name: string;
+    type: string;
+    district: string;
+  };
 }
 
 export interface Teacher extends User {

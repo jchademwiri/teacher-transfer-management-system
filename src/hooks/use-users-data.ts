@@ -9,15 +9,14 @@ export function useUsersData() {
   const [schools, setSchools] = useState<School[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const { toast } = useToast();
-  const fetchUsers = async () => {
+  const { toast } = useToast();  const fetchUsers = async () => {
     setIsLoading(true);
     try {
       const { data, error } = await supabase
         .from('users')
         .select(`
           *,
-          schools (
+          school:schools (
             id,
             name,
             type,
@@ -29,7 +28,10 @@ export function useUsersData() {
       if(error) throw error;
 
       if(data) {
-        const mappedUsers = data.map(mapUser);
+        const mappedUsers = data.map((userData: any) => ({
+          ...mapUser(userData),
+          school: userData.school
+        }));
         setUsers(mappedUsers);
       }
     } catch (error) {
