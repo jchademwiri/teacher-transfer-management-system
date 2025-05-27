@@ -15,7 +15,7 @@ import {
   MOCK_SCHOOLS, 
   MOCK_SUBJECTS, 
   MOCK_TEACHERS,
-  MOCK_TRANSFER_REQUESTS
+  
 } from '@/mock/data';
 import { TransferRequest, Teacher } from '@/types';
 
