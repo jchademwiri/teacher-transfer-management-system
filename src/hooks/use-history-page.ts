@@ -108,11 +108,16 @@ export function useHistoryPage(role: 'teacher' | 'headmaster', itemsPerPage = 5)
           
           if (headSchoolData) {
             setSchoolId(headSchoolData.id);
+            // Fetch all schools for destination mapping
+            const { data: allSchoolsData } = await supabase
+              .from('schools')
+              .select('*');
+            setSchools(allSchoolsData || []);
             
             // Get all requests for this school that have headmaster decisions
             const { data: historyData, error: historyError } = await supabase
               .from('transfer_requests')
-              .select('*, teachers(*), schools!to_school_id(*)')
+              .select('*')
               .eq('from_school_id', headSchoolData.id)
               .or('status.eq.forwarded_to_admin,status.eq.rejected_by_headmaster');
             

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 // import MainNavigation from "@/components/MainNavigation";
 import { Button } from '@/components/ui/button';
@@ -49,6 +48,17 @@ const HeadmastersPage = () => {
   const handleSubmit = async (values: HeadmasterFormValues) => {
     setIsSubmitting(true);
     try {
+      // Add validation
+      if (!values.name?.trim()) {
+        toast({
+          title: 'Validation Error',
+          description: 'Headmaster name is required',
+          variant: 'destructive',
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
       if (currentHeadmaster) {
         // Handle school reassignment if school changed
         if (currentHeadmaster.school_id !== values.school_id) {
@@ -146,13 +156,15 @@ const HeadmastersPage = () => {
   };
 
   // Filter headmasters based on search term
-  const filteredHeadmasters = headmasters.filter(headmaster => 
-    headmaster.name.toLowerCase().includes(search.toLowerCase()) ||
-    headmaster.ec_number.toLowerCase().includes(search.toLowerCase()) ||
-    headmaster.email?.toLowerCase().includes(search.toLowerCase()) ||
-    headmaster.schools?.name.toLowerCase().includes(search.toLowerCase()) ||
-    headmaster.schools?.district.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredHeadmasters = headmasters.filter(headmaster => {
+    const nameMatch = headmaster.name?.toLowerCase().includes(search.toLowerCase()) || false;
+    const ecMatch = headmaster.ec_number?.toLowerCase().includes(search.toLowerCase()) || false;
+    const emailMatch = headmaster.email?.toLowerCase().includes(search.toLowerCase()) || false;
+    const schoolNameMatch = headmaster.schools?.name?.toLowerCase().includes(search.toLowerCase()) || false;
+    const districtMatch = headmaster.schools?.district?.toLowerCase().includes(search.toLowerCase()) || false;
+
+    return nameMatch || ecMatch || emailMatch || schoolNameMatch || districtMatch;
+  });
   
   return (
     <div className="min-h-screen bg-background">

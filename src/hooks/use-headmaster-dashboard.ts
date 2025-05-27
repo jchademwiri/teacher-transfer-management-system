@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { TransferRequest, School, Teacher } from '@/types';
@@ -16,6 +15,7 @@ export function useHeadmasterDashboard() {
   const [recentActivity, setRecentActivity] = useState<TransferRequest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [allSchools, setAllSchools] = useState<School[]>([]);
   
   useEffect(() => {
     async function fetchHeadmasterData() {
@@ -33,6 +33,7 @@ export function useHeadmasterDashboard() {
           // Get the headmaster's school from mock data
           const mockSchool = MOCK_SCHOOLS.find(s => s.headmasterId === user.id);
           setSchool(mockSchool || null);
+          setAllSchools(MOCK_SCHOOLS);
           
           if (mockSchool) {
             // Filter mock data based on the school
@@ -60,8 +61,7 @@ export function useHeadmasterDashboard() {
             // Get recent activity
             const recentReqs = [...MOCK_TRANSFER_REQUESTS]
               .filter(req => req.fromSchoolId === mockSchool.id)
-              .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
-              .slice(0, 5);
+              .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
             setRecentActivity(recentReqs);
           }
         } else {
@@ -145,13 +145,32 @@ export function useHeadmasterDashboard() {
             // Get recent activity
             const { data: recentData } = await supabase
               .from('transfer_requests')
-              .select('*, teachers(*)')
+              .select('*')
               .eq('from_school_id', schoolData.id)
-              .order('updated_at', { ascending: false })
-              .limit(5);
-              
-            setRecentActivity(recentData ? recentData.map(mapTransferRequest) : []);
+              .order('updated_at', { ascending: false });
+            // Now filter only those where the teacher is a user with role 'teacher'
+            // We'll need to fetch users for teacherIds
+            let filteredRecentData = recentData || [];
+            if (filteredRecentData.length > 0) {
+              // Get all unique teacherIds
+              const teacherIds = [...new Set(filteredRecentData.map(r => r.teacher_id))];
+              // Fetch users with role 'teacher' and those ids
+              const { data: teacherUsers } = await supabase
+                .from('users')
+                .select('id, role')
+                .in('id', teacherIds)
+                .eq('role', 'teacher');
+              const teacherUserIds = new Set((teacherUsers || []).map(u => u.id));
+              filteredRecentData = filteredRecentData.filter(r => teacherUserIds.has(r.teacher_id));
+            }
+            setRecentActivity(filteredRecentData.map(mapTransferRequest));
           }
+
+          // Fetch all schools for destination mapping
+          const { data: allSchoolsData } = await supabase
+            .from('schools')
+            .select('*');
+          setAllSchools(allSchoolsData ? allSchoolsData.map(mapSchool) : []);
         }
       } catch (err) {
         console.error('Error fetching dashboard data:', err);
@@ -195,5 +214,6 @@ export function useHeadmasterDashboard() {
     getTeacherName,
     formatDate,
     getSchoolName,
+    allSchools,
   };
 }

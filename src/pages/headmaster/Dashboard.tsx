@@ -1,4 +1,3 @@
-
 import React from 'react';
 // import { MainNavigation } from '@/components/MainNavigation';
 import { Link } from 'react-router-dom';
@@ -22,7 +21,8 @@ const HeadmasterDashboard = () => {
     isLoading,
     getTeacherName,
     formatDate,
-    error
+    error,
+    allSchools
   } = useHeadmasterDashboard();
   
   const { isConnected } = useDatabase();
@@ -33,16 +33,30 @@ const HeadmasterDashboard = () => {
     const teacherName = request._teachers ? 
       (request._teachers as any).name : 
       getTeacherName(request.teacherId);
-      
+
+    let destination = 'Unspecified';
+    if (request.toSchoolId) {
+      const schoolObj = allSchools.find(s => s.id === request.toSchoolId);
+      if (schoolObj) {
+        destination = `${schoolObj.name}, ${schoolObj.district}`;
+      } else {
+        destination = request.toSchoolId; // fallback to id if not found
+      }
+    } else if (request.toDistrict) {
+      destination = `Any School, ${request.toDistrict}`;
+    }
+    
     return {
       id: request.id,
       teacherName,
       teacherId: request.teacherId,
       date: formatDate(request.updatedAt),
-      destination: request.toSchoolId ? request.toSchoolId : request.toDistrict || 'Unspecified',
+      destination,
       status: request.status
     };
   });
+
+
 
   if (isLoading) {
     return (

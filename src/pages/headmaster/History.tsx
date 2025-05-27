@@ -1,4 +1,3 @@
-
 import React from 'react';
 // import { MainNavigation } from '@/components/MainNavigation';
 import { Card, CardContent } from '@/components/ui/card';
@@ -8,10 +7,9 @@ import { useDatabase } from '@/hooks/use-database';
 import { useHistoryPage, headmasterStatusOptions } from '@/hooks/use-history-page';
 import { FilterControls } from '@/components/history/FilterControls';
 import { RequestHistoryCard } from '@/components/history/RequestHistoryCard';
+import { RecentActivityTable } from '@/components/dashboard/RecentActivityTable';
 
 const HeadmasterHistory = () => {
-  const { isConnected } = useDatabase();
-  
   const {
     statusFilter,
     setStatusFilter,
@@ -23,7 +21,34 @@ const HeadmasterHistory = () => {
     isLoading,
     formatDate,
     error,
+    schools
   } = useHistoryPage('headmaster');
+  const { isConnected } = useDatabase();
+  
+  // Format activity data for the RecentActivityTable component
+  const formattedActivity = paginatedRequests.map((request) => {
+    // Teacher name logic (if you have a teachers array, use it; otherwise fallback)
+    const teacherName = request.teachers ? request.teachers.name : 'Unknown Teacher';
+    let destination = 'Unspecified';
+    if (request.to_school_id) {
+      const schoolObj = schools.find(s => s.id === request.to_school_id);
+      if (schoolObj) {
+        destination = `${schoolObj.name}, ${schoolObj.district}`;
+      } else {
+        destination = request.to_school_id; // fallback to id if not found
+      }
+    } else if (request.to_district) {
+      destination = `Any School, ${request.to_district}`;
+    }
+    return {
+      id: request.id,
+      teacherName,
+      teacherId: request.teacher_id,
+      date: formatDate(request.updated_at),
+      destination,
+      status: request.status
+    };
+  });
   
   if (isLoading) {
     return (
@@ -66,33 +91,14 @@ const HeadmasterHistory = () => {
         />
         
         {paginatedRequests.length > 0 ? (
-          <div className="grid gap-6">
-            {paginatedRequests.map((request) => {
-              const teacherName = request.teachers ? request.teachers.name : 'Unknown Teacher';
-              const currentSchool = request.from_school ? request.from_school.name : 'Current School';
-              const targetSchool = request.to_school_id && request.schools ? 
-                request.schools.name : request.to_district || 'Unspecified';
-              
-              return (
-                <RequestHistoryCard
-                  key={request.id}
-                  id={request.id}
-                  teacherName={teacherName}
-                  subject={request.subject || 'N/A'}
-                  currentSchool={currentSchool}
-                  targetSchool={targetSchool}
-                  status={request.status}
-                  submittedAt={request.submitted_at}
-                  actionDate={request.headmaster_action_at || request.updated_at}
-                  headmasterComment={request.headmaster_comment}
-                  adminStatus={request.adminStatus}
-                  adminActionDate={request.admin_action_at}
-                  adminComment={request.admin_comment}
-                  formatDate={formatDate}
-                />
-              );
-            })}
-          </div>
+          <RecentActivityTable
+            activities={formattedActivity}
+            basePath="/headmaster"
+            isTeacherView={false}
+            linkText="View All Requests"
+            linkPath="/history"
+            title="All Transfer Requests"
+          />
         ) : (
           <Card className="shadow-sm">
             <CardContent className="flex flex-col items-center justify-center py-10">
