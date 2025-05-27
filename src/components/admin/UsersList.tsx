@@ -53,7 +53,7 @@ export function UsersList({
 
   const getSchoolInfo = (user: User) => {
     if (!user.school) return '-';
-    return `${user.school.name} - ${user.school.district || 'No District'}`;
+    return `${user.school.name} (${user.school.district})`;
   };
 
   const handleStatusChange = async (userId: string, checked: boolean) => {

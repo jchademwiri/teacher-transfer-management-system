@@ -34,10 +34,23 @@ export const userSchema = z.object({
       message: "Please enter a valid Zimbabwean phone number",
     })
     .optional(),
-
   // School Information
-  schoolId: z.string().min(1, { message: "Please select a school" }).optional(),
-  subjectId: z.string().min(1, { message: "Please select a subject" }).optional(),
+  schoolId: z.string().min(1, { message: "Please select a school" })
+    .optional()
+    .refine((val, ctx) => {
+      if (ctx.parent.role === 'teacher' && !val) {
+        return false;
+      }
+      return true;
+    }, { message: "School is required for teachers" }),
+  subjectId: z.string().min(1, { message: "Please select a subject" })
+    .optional()
+    .refine((val, ctx) => {
+      if (ctx.parent.role === 'teacher' && !val) {
+        return false;
+      }
+      return true;
+    }, { message: "Subject is required for teachers" }),
 
   // Account Status
   isActive: z.boolean().default(true),
