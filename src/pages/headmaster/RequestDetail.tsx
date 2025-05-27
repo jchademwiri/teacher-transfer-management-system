@@ -1,45 +1,113 @@
-
-import { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 // import { MainNavigation } from '@/components/MainNavigation';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
+import { FileText, Check } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { StatusBadge } from '@/components/StatusBadge';
-import { useToast } from '@/hooks/use-toast';
-import { RequestStatus } from '@/types';
-
-// Mock data for a single transfer request
-const mockRequest = {
-  id: '101',
-  teacherName: 'John Smith',
-  teacherEC: 'EC123456',
-  teacherEmail: 'john.smith@example.com',
-  currentSchool: 'Sunset Primary School',
-  targetSchool: 'Morning Star Academy',
-  district: 'Eastern District',
-  subject: 'Mathematics',
-  teachingLevel: 'Primary',
-  yearsOfExperience: 8,
-  reason: 'I am requesting a transfer to Morning Star Academy as it is closer to my new residence following my recent relocation. The reduced commute time would allow me to be more effective in my teaching duties and provide additional support for after-school activities.',
-  status: 'submitted' as RequestStatus,
-  submittedAt: '2024-05-03T10:30:00Z',
-};
+import { supabase } from '@/integrations/supabase/client';
+import type { TransferRequest, School, User } from '@/types';
+import { mapTransferRequest, mapUser, mapSchool } from '@/lib/mappers';
 
 const HeadmasterRequestDetail = () => {
-  const { id } = useParams();
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { toast } = useToast();
-  const [request] = useState(mockRequest);
+  const [request, setRequest] = useState<TransferRequest | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+  const [teacher, setTeacher] = useState<User | null>(null);
+  const [currentSchool, setCurrentSchool] = useState<School | null>(null);
+  const [targetSchool, setTargetSchool] = useState<School | null>(null);
+
+  useEffect(() => {
+    async function loadRequestDetails() {
+      if (!id) return;
+
+      try {
+        // Get transfer request details
+        const { data: requestData, error: requestError } = await supabase
+          .from('transfer_requests')
+          .select('*')
+          .eq('id', id)
+          .single();
+
+        if (requestError) throw requestError;
+        if (!requestData) throw new Error('Request not found');
+
+        const mappedRequest = mapTransferRequest(requestData);
+        setRequest(mappedRequest);
+
+        // Get teacher details
+        const { data: teacherData, error: teacherError } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', mappedRequest.teacherId)
+          .single();
+
+        if (teacherError) throw teacherError;
+        setTeacher(mapUser(teacherData));
+
+        // Get school details
+        const { data: schoolsData, error: schoolsError } = await supabase
+          .from('schools')
+          .select('*')
+          .in('id', [mappedRequest.fromSchoolId, mappedRequest.toSchoolId].filter(Boolean));
+
+        if (schoolsError) throw schoolsError;
+
+        const currentSchool = schoolsData.find(s => s.id === mappedRequest.fromSchoolId);
+        const targetSchool = schoolsData.find(s => s.id === mappedRequest.toSchoolId);
+
+        setCurrentSchool(currentSchool ? mapSchool(currentSchool) : null);
+        setTargetSchool(targetSchool ? mapSchool(targetSchool) : null);
+
+      } catch (error) {
+        console.error('Error loading request details:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to load transfer request details.',
+          variant: 'destructive',
+        });
+      }
+    }
+
+    loadRequestDetails();
+  }, [id, toast]);
+
   const handleApprove = async () => {
+    if (!request || !user) return;
+    
     setIsSubmitting(true);
     
     try {
-      // Simulating API call with a timeout
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Update request status
+      const { error: updateError } = await supabase
+        .from('transfer_requests')
+        .update({
+          status: 'forwarded_to_admin',
+          headmaster_action_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', request.id);
+      
+      if (updateError) throw updateError;
+
+      // Create notification for teacher
+      const { error: notificationError } = await supabase
+        .from('notifications')
+        .insert({
+          user_id: request.teacherId,
+          title: 'Transfer Request Approved',
+          message: 'Your transfer request has been approved by the headmaster and forwarded to admin for final review.',
+          type: 'success',
+        });
+
+      if (notificationError) throw notificationError;
       
       toast({
         title: "Request Approved",
@@ -60,7 +128,7 @@ const HeadmasterRequestDetail = () => {
   };
   
   const handleReject = async () => {
-    if (!rejectionReason.trim()) {
+    if (!request || !user || !rejectionReason.trim()) {
       toast({
         title: "Validation Error",
         description: "Please provide a reason for rejection.",
@@ -72,12 +140,34 @@ const HeadmasterRequestDetail = () => {
     setIsSubmitting(true);
     
     try {
-      // Simulating API call with a timeout
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Update request status
+      const { error: updateError } = await supabase
+        .from('transfer_requests')
+        .update({
+          status: 'rejected_by_headmaster',
+          headmaster_comment: rejectionReason,
+          headmaster_action_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', request.id);
+      
+      if (updateError) throw updateError;
+
+      // Create notification for teacher
+      const { error: notificationError } = await supabase
+        .from('notifications')
+        .insert({
+          user_id: request.teacherId,
+          title: 'Transfer Request Rejected',
+          message: `Your transfer request has been rejected. Reason: ${rejectionReason}`,
+          type: 'error',
+        });
+
+      if (notificationError) throw notificationError;
       
       toast({
         title: "Request Rejected",
-        description: "The transfer request has been rejected.",
+        description: "The transfer request has been rejected and the teacher has been notified.",
       });
       
       navigate('/headmaster/requests');
@@ -92,6 +182,8 @@ const HeadmasterRequestDetail = () => {
       setIsSubmitting(false);
     }
   };
+
+  if (!request || !teacher) return null;
 
   return (
     <div className="min-h-screen bg-background">
@@ -109,12 +201,12 @@ const HeadmasterRequestDetail = () => {
           <CardHeader className="pb-2">
             <div className="flex justify-between items-center">
               <CardTitle className="text-lg">
-                {request.teacherName} - {request.subject}
+                {teacher.name}
               </CardTitle>
               <StatusBadge status={request.status} />
             </div>
             <div className="text-sm text-muted-foreground">
-              EC Number: {request.teacherEC} | Submitted on {new Date(request.submittedAt).toLocaleDateString()}
+              EC Number: {teacher.ecNumber} | Submitted on {new Date(request.submittedAt).toLocaleDateString()}
             </div>
           </CardHeader>
           <CardContent>
@@ -122,25 +214,18 @@ const HeadmasterRequestDetail = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <p className="font-medium">Current School</p>
-                  <p className="text-muted-foreground">{request.currentSchool}</p>
+                  <p className="text-muted-foreground">
+                    {currentSchool?.name}, {currentSchool?.district}
+                  </p>
                 </div>
                 <div>
-                  <p className="font-medium">Target School</p>
-                  <p className="text-muted-foreground">{request.targetSchool}</p>
-                </div>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <p className="font-medium">District</p>
-                  <p className="text-muted-foreground">{request.district}</p>
-                </div>
-                <div>
-                  <p className="font-medium">Teaching Level</p>
-                  <p className="text-muted-foreground">{request.teachingLevel}</p>
-                </div>
-                <div>
-                  <p className="font-medium">Years of Experience</p>
-                  <p className="text-muted-foreground">{request.yearsOfExperience}</p>
+                  <p className="font-medium">Requested Transfer To</p>
+                  <p className="text-muted-foreground">
+                    {request.toSchoolId ? 
+                      `${targetSchool?.name}, ${targetSchool?.district}` : 
+                      `Any School, ${request.toDistrict}`
+                    }
+                  </p>
                 </div>
               </div>
               <div>
@@ -151,38 +236,40 @@ const HeadmasterRequestDetail = () => {
           </CardContent>
         </Card>
         
-        <Card className="shadow-sm">
-          <CardHeader>
-            <CardTitle>Decision</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4">
-              <div>
-                <label className="font-medium block mb-2">Rejection Reason (required if rejecting)</label>
-                <Textarea
-                  placeholder="Provide a reason for rejection..."
-                  value={rejectionReason}
-                  onChange={(e) => setRejectionReason(e.target.value)}
-                />
+        {request.status === 'pending_head_approval' && (
+          <Card className="shadow-sm">
+            <CardHeader>
+              <CardTitle>Decision</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-4">
+                <div>
+                  <label className="font-medium block mb-2">Rejection Reason (required if rejecting)</label>
+                  <Textarea
+                    placeholder="Provide a reason for rejection..."
+                    value={rejectionReason}
+                    onChange={(e) => setRejectionReason(e.target.value)}
+                  />
+                </div>
+                <div className="flex justify-end gap-4">
+                  <Button 
+                    variant="outline" 
+                    onClick={handleReject}
+                    disabled={isSubmitting || !rejectionReason.trim()}
+                  >
+                    Reject Request
+                  </Button>
+                  <Button 
+                    onClick={handleApprove}
+                    disabled={isSubmitting}
+                  >
+                    Approve & Forward to Admin
+                  </Button>
+                </div>
               </div>
-              <div className="flex justify-end gap-4">
-                <Button 
-                  variant="outline" 
-                  onClick={handleReject}
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? "Rejecting..." : "Reject Request"}
-                </Button>
-                <Button 
-                  onClick={handleApprove}
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? "Approving..." : "Approve & Forward to Admin"}
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );

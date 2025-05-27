@@ -1,68 +1,98 @@
-
-import { useState } from 'react';
-// import { MainNavigation } from '@/components/MainNavigation';
-import { DashboardCard } from '@/components/DashboardCard';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { StatusBadge } from '@/components/StatusBadge';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { RequestStatus } from '@/types';
-import { useDatabase } from '@/hooks/use-database';
-import { FileText, Search } from 'lucide-react';
+// import { MainNavigation } from '@/components/MainNavigation';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-
-// Mock data for teacher transfer requests
-const mockRequests = [
-  {
-    id: '101',
-    teacherName: 'John Smith',
-    teacherEC: 'EC123456',
-    currentSchool: 'Sunset Primary School',
-    targetSchool: 'Morning Star Academy',
-    subject: 'Mathematics',
-    reason: 'Moving closer to family',
-    status: 'pending_head_approval' as RequestStatus,
-    submittedAt: '2024-05-03T10:30:00Z',
-  },
-  {
-    id: '102',
-    teacherName: 'Emily Johnson',
-    teacherEC: 'EC789012',
-    currentSchool: 'Sunset Primary School',
-    targetSchool: 'Riverdale Secondary',
-    subject: 'English',
-    reason: 'Professional development opportunity',
-    status: 'pending_head_approval' as RequestStatus,
-    submittedAt: '2024-05-01T14:20:00Z',
-  },
-  {
-    id: '103',
-    teacherName: 'Michael Brown',
-    teacherEC: 'EC345678',
-    currentSchool: 'Sunset Primary School',
-    targetSchool: 'Lakeview Elementary',
-    subject: 'Science',
-    reason: 'Better facilities for science experiments',
-    status: 'pending_head_approval' as RequestStatus,
-    submittedAt: '2024-04-28T09:15:00Z',
-  },
-];
+import { Search } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { useDatabase } from '@/hooks/use-database';
+import { DashboardCard } from '@/components/DashboardCard';
+import { StatusBadge } from '@/components/StatusBadge';
+import type { TransferRequest, School, User } from '@/types';
+import { mapTransferRequest, mapUser, mapSchool } from '@/lib/mappers';
 
 const HeadmasterRequests = () => {
-  const [requests] = useState(mockRequests);
+  const [requests, setRequests] = useState<(TransferRequest & { teacher: User })[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { isConnected } = useDatabase();
+  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [schools, setSchools] = useState<School[]>([]);
   
+  useEffect(() => {
+    if (!user) return;
+
+    async function fetchRequests() {
+      try {
+        // Get headmaster's school
+        const { data: schoolData, error: schoolError } = await supabase
+          .from('schools')
+          .select('*')
+          .eq('headmaster_id', user.id)
+          .single();
+        
+        if (schoolError) throw schoolError;
+
+        // Get all schools for mapping
+        const { data: allSchools } = await supabase
+          .from('schools')
+          .select('*');
+        
+        setSchools(allSchools ? allSchools.map(mapSchool) : []);
+
+        // Get transfer requests for this school
+        const { data: requestsData, error: requestsError } = await supabase
+          .from('transfer_requests')
+          .select('*, users:teacher_id(*)')
+          .eq('from_school_id', schoolData.id)
+          .eq('status', 'pending_head_approval')
+          .order('submitted_at', { ascending: false });
+
+        if (requestsError) throw requestsError;
+
+        // Map the data
+        const mappedRequests = requestsData.map(request => ({
+          ...mapTransferRequest(request),
+          teacher: mapUser(request.users)
+        }));
+
+        setRequests(mappedRequests);
+      } catch (err) {
+        console.error('Error fetching requests:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load requests');
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchRequests();
+  }, [user]);
+
   const viewRequest = (id: string) => {
     navigate(`/headmaster/requests/${id}`);
   };
 
   // Filter requests based on search query
   const filteredRequests = requests.filter(request => 
-    request.teacherName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    request.teacherEC.toLowerCase().includes(searchQuery.toLowerCase())
+    request.teacher.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    request.teacher.ecNumber.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <main className="container mx-auto py-8 px-4">
+          <p>Loading requests...</p>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -76,12 +106,17 @@ const HeadmasterRequests = () => {
               ⚠️ Database connection issue. Some features may be limited.
             </p>
           )}
+          {error && (
+            <p className="text-red-600 text-sm">
+              ⚠️ Error: {error}
+            </p>
+          )}
         </div>
         
         <div className="grid gap-6 md:grid-cols-3 mb-6">
           <DashboardCard 
             title="Pending Requests" 
-            icon={<FileText className="h-4 w-4 text-muted-foreground" />}
+            icon={<Search className="h-4 w-4 text-muted-foreground" />}
             value={requests.length.toString()}
             description="Awaiting your review"
           />
@@ -101,48 +136,53 @@ const HeadmasterRequests = () => {
         
         {filteredRequests.length > 0 ? (
           <div className="grid gap-6">
-            {filteredRequests.map((request) => (
-              <Card key={request.id} className="shadow-sm">
-                <CardHeader className="pb-2">
-                  <div className="flex justify-between items-center">
-                    <CardTitle className="text-lg">
-                      {request.teacherName} - {request.subject}
-                    </CardTitle>
-                    <StatusBadge status={request.status} />
-                  </div>
-                  <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                    <span>EC: {request.teacherEC}</span>
-                    <span>•</span>
-                    <span>Submitted on {new Date(request.submittedAt).toLocaleDateString()}</span>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid gap-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <p className="font-medium">Current School</p>
-                        <p className="text-muted-foreground">{request.currentSchool}</p>
+            {filteredRequests.map((request) => {
+              const targetSchool = request.toSchoolId 
+                ? schools.find(s => s.id === request.toSchoolId)
+                : null;
+
+              return (
+                <Card key={request.id} className="shadow-sm">
+                  <CardHeader className="pb-2">
+                    <div className="flex justify-between items-center">
+                      <CardTitle className="text-lg">
+                        {request.teacher.name}
+                      </CardTitle>
+                      <StatusBadge status={request.status} />
+                    </div>
+                    <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                      <span>EC: {request.teacher.ecNumber}</span>
+                      <span>•</span>
+                      <span>Submitted on {new Date(request.submittedAt).toLocaleDateString()}</span>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-sm text-muted-foreground mb-1">Requested Transfer To:</p>
+                          <p className="font-medium">
+                            {request.toSchoolId 
+                              ? `${targetSchool?.name}, ${targetSchool?.district}`
+                              : `Any School, ${request.toDistrict}`
+                            }
+                          </p>
+                        </div>
                       </div>
                       <div>
-                        <p className="font-medium">Target School</p>
-                        <p className="text-muted-foreground">{request.targetSchool}</p>
+                        <p className="text-sm text-muted-foreground mb-1">Transfer Reason:</p>
+                        <p className="text-sm">{request.reason}</p>
+                      </div>
+                      <div className="flex justify-end mt-2">
+                        <Button onClick={() => viewRequest(request.id)}>
+                          View Details
+                        </Button>
                       </div>
                     </div>
-                    <div>
-                      <p className="font-medium">Reason for Transfer</p>
-                      <p className="text-muted-foreground">{request.reason}</p>
-                    </div>
-                    <div className="flex justify-end mt-2">
-                      <Button 
-                        onClick={() => viewRequest(request.id)}
-                      >
-                        Review Request
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         ) : (
           <Card className="shadow-sm">
