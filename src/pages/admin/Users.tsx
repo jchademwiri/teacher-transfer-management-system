@@ -1,18 +1,26 @@
 import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { User } from '@/types';
-import { PlusCircle } from 'lucide-react';
 import { useUsersData } from '@/hooks/use-users-data';
-import { UsersList } from '@/components/admin/UsersList';
-import { UserForm } from '@/components/admin/UserForm';
+import { UserTabs } from '@/components/admin/UserTabs';
 import { UserFormValues } from '@/components/admin/UserFormSchema';
 import { supabase } from '@/integrations/supabase/client';
+import { createClient } from '@supabase/supabase-js';
+
+// Create admin client once, outside the component
+const adminClient = createClient(
+  import.meta.env.VITE_SUPABASE_URL,
+  import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY,
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  }
+);
 
 const UsersPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const { toast } = useToast();
@@ -49,54 +57,79 @@ const UsersPage = () => {
         toast({
           title: 'User updated',
           description: `${values.name} has been updated successfully.`,
-        });
-      } else {
-        // Get the admin secret from environment variables
-        // IMPORTANT: VITE_ADMIN_SECRET must match the ADMIN_SECRET set in your Edge Function's environment variables
-        const adminSecret = import.meta.env.VITE_ADMIN_SECRET;
-        
-        if (!adminSecret) {
-          throw new Error("Admin secret is not defined in environment variables");
-        }
-
-        // Call the Edge Function to create the user
-        const response = await fetch(
-          "https://pbujhnbcrkqslblrigxe.supabase.co/functions/v1/create-user",
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "Authorization": `Bearer ${adminSecret}`,
-            },
-            body: JSON.stringify({
-              email: values.email,
-              password: values.password,
+        });      } else {        // Use the pre-created admin client
+        const adminAuthClient = adminClient.auth.admin;        try {
+          // Create user with admin privileges
+          const { data: userData, error: userError } = await adminAuthClient.createUser({
+            email: values.email,
+            password: values.password,
+            email_confirm: true,
+            user_metadata: { 
               name: values.name,
+              role: values.role,
+              ec_number: values.ecNumber,
+            },
+          });
+
+          if (userError) {
+            console.error("Error creating user:", userError);
+            throw userError;
+          }
+
+          if (!userData?.user?.id) {
+            throw new Error("User creation successful but no user ID returned");
+          }
+
+          // Create user profile in users table
+          const { error: profileError } = await supabase
+            .from('users')
+            .insert({
+              id: userData.user.id,
+              name: values.name,
+              email: values.email,
               role: values.role,
               ec_number: values.ecNumber,
               phone: values.phone || null,
               school_id: values.schoolId || null,
               subject_id: values.subjectId || null,
-            }),
+              is_active: true,
+              setup_complete: true,
+              token_identifier: userData.user.id,
+              updated_at: new Date().toISOString(),
+              created_at: new Date().toISOString()
+            });
+
+          if (profileError) {
+            throw profileError;
           }
-        );
-        
-        // Parse the response
-        const result = await response.json();
-        
-        // Check if the request was successful
-        if (!response.ok) {
-          console.error("Error details:", result);
-          throw new Error(result.error || "Failed to create user");
+
+          // Update user status
+          const { error: updateError } = await adminAuthClient.updateUser(userData.user.id, {
+            user_metadata: { 
+              name: values.name,
+              role: values.role,
+              ec_number: values.ecNumber,
+              is_active: true,
+              setup_complete: true
+            },
+            app_metadata: { role: values.role }
+          });
+
+          if (updateError) {
+            throw updateError;
+          }if (profileError) {
+          // If profile creation fails, we should clean up the auth user
+          await adminAuthClient.deleteUser(userData.user.id);
+          console.error("Error creating user profile:", profileError);
+          throw new Error(`Failed to create user profile: ${profileError.message}`);
         }
         
         toast({
           title: 'User added',
           description: `${values.name} has been added successfully.`,
         });
-      }
-
-      setIsDialogOpen(false);
+      }      setIsEditing(false);
+      setCurrentUser(null);
       fetchUsers();
     } catch (error) {
       console.error('Error saving user:', error);
@@ -107,7 +140,6 @@ const UsersPage = () => {
       });
     }
   };
-
   const handleEdit = (user: User) => {
     setCurrentUser({
       ...user,
@@ -115,45 +147,26 @@ const UsersPage = () => {
       phone: user.phone || '',
     });
     setIsEditing(true);
-    setIsDialogOpen(true);
   };
 
-  return (
-    <div className="min-h-screen bg-background">
+  return (    <div className="min-h-screen bg-background">
       <div className="container py-6">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-3xl font-bold tracking-tight">Users</h1>
-          <Button onClick={() => { setIsEditing(false); setCurrentUser(null); setIsDialogOpen(true); }}>
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Add User
-          </Button>
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold tracking-tight">Users Management</h1>
         </div>
 
-        <UsersList
+        <UserTabs
           users={users}
+          schools={schools}
+          subjects={subjects}
           searchQuery={searchQuery}
           isLoading={isLoading}
+          isEditing={isEditing}
+          currentUser={currentUser}
           onSearchChange={setSearchQuery}
           onEditUser={handleEdit}
+          onSubmit={handleAddOrUpdateUser}
         />
-
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>{isEditing ? 'Edit User' : 'Add New User'}</DialogTitle>
-              <DialogDescription>
-                {isEditing ? 'Update the user information below.' : 'Add a new user to the system.'}
-              </DialogDescription>
-            </DialogHeader>
-            <UserForm
-              isEditing={isEditing}
-              currentUser={currentUser}
-              schools={schools}
-              subjects={subjects}
-              onSubmit={handleAddOrUpdateUser}
-            />
-          </DialogContent>
-        </Dialog>
       </div>
     </div>
   );
