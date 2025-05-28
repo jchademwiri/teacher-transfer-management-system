@@ -55,26 +55,14 @@ export function UserForm({
 
   useEffect(() => {
     if (!isEditing && !currentUser) {
-      form.reset({
-        name: '',
-        email: '',
-        password: '',
-        role: 'teacher',
-        schoolId: '',
-        subjectId: '',
-        ecNumber: '',
-        phone: '',
-        isActive: true,
-        setupComplete: false,
-      });
+      form.reset();
     } else if (isEditing && currentUser) {
       form.reset({
-        name: currentUser.name,
-        email: currentUser.email,
-        password: 'password', // Do not populate password for security reasons
-        role: currentUser.role,
+        name: currentUser.name || '',
+        email: currentUser.email || '',
+        role: currentUser.role || 'teacher',
         schoolId: currentUser.schoolId || '',
-        subjectId: '',
+        subjectId: currentUser.subjectId || '',
         ecNumber: currentUser.ecNumber || '',
         phone: currentUser.phone || '',
         isActive: currentUser.isActive ?? true,
@@ -82,6 +70,9 @@ export function UserForm({
       });
     }
   }, [isEditing, currentUser, form]);
+
+  const role = form.watch('role');
+  const showSchoolFields = role === 'teacher' || role === 'headmaster';
 
   return (
     <Form {...form}>
@@ -193,64 +184,68 @@ export function UserForm({
           </div>
         </div>
 
-        {/* School Information */}
-        <div className="grid grid-cols-2 gap-6 pt-6 border-t">
-          <FormField
-            control={form.control}
-            name="schoolId"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>School</FormLabel>
-                <Select 
-                  onValueChange={field.onChange} 
-                  defaultValue={field.value}
-                >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select school" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {schools.map((school) => (
-                      <SelectItem key={school.id} value={school.id}>
-                        {school.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+        {/* School Information - Only show for teachers and headmasters */}
+        {showSchoolFields && (
+          <div className="grid grid-cols-2 gap-6 pt-6 border-t">
+            <FormField
+              control={form.control}
+              name="schoolId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>School</FormLabel>
+                  <Select 
+                    onValueChange={field.onChange} 
+                    defaultValue={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select school" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {schools.map((school) => (
+                        <SelectItem key={school.id} value={school.id}>
+                          {school.name} ({school.district})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-          <FormField
-            control={form.control}
-            name="subjectId"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Subject</FormLabel>
-                <Select 
-                  onValueChange={field.onChange} 
-                  defaultValue={field.value}
-                >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select subject" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {subjects.map((subject) => (
-                      <SelectItem key={subject.id} value={subject.id}>
-                        {subject.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
+            {role === 'teacher' && (
+              <FormField
+                control={form.control}
+                name="subjectId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Subject</FormLabel>
+                    <Select 
+                      onValueChange={field.onChange} 
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select subject" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {subjects.map((subject) => (
+                          <SelectItem key={subject.id} value={subject.id}>
+                            {subject.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             )}
-          />
-        </div>
+          </div>
+        )}
 
         {/* Submit Button */}
         <div className="flex justify-end space-x-4 pt-6 border-t">

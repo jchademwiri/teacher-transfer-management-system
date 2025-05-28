@@ -133,8 +133,15 @@ const UsersPage = () => {
   const handleEdit = (user: User) => {
     setCurrentUser({
       ...user,
+      name: user.name || '',
+      email: user.email || '',
+      role: user.role || 'teacher',
+      schoolId: user.school?.id || '',
+      subjectId: user.subject?.id || '',
       ecNumber: user.ecNumber || '',
       phone: user.phone || '',
+      isActive: user.isActive ?? true,
+      setupComplete: user.setupComplete ?? false,
     });
     setIsEditing(true);
   };
